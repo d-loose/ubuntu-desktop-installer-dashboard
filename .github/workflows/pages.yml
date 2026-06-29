@@ -27,7 +27,9 @@ jobs:
       - name: Run tests
         run: python -m pytest -v
       - name: Build dashboard
-        run: python -m iso_dashboard.cli build --data data/latest.json --site site
+        run: python -m iso_dashboard.cli build --data data/latest.json --site site --github-token "$GITHUB_TOKEN" --verbose
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
