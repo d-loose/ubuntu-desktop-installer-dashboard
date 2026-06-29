@@ -43,6 +43,22 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "<script" not in html.lower()
 
 
+def test_escapes_malicious_html_in_warnings_and_source():
+    # Malicious content in warning and source ref/url should be escaped
+    payload = sample_payload()
+    # inject a warning containing a script tag
+    payload["records"][0]["warnings"] = ['Found issue <script>alert(1)</script>']
+    # inject malicious ref and URL into subiquity
+    payload["records"][0]["subiquity"] = {"ref": "bad-ref<script>", "url": " javascript:alert(2) "}
+
+    html = render_dashboard(payload)
+
+    # The rendered HTML must not contain raw <script
+    assert "<script" not in html.lower()
+    # The quoted URL should be escaped; ensure the raw javascript: is not present unescaped
+    assert "javascript:alert(2)" not in html.lower()
+
+
 def test_write_site_writes_index_css_and_json_copy(tmp_path):
     data_path = tmp_path / "data" / "latest.json"
     data_path.parent.mkdir()

@@ -36,7 +36,13 @@ def _source(value: dict[str, object] | None) -> str:
     ref = escape(str(value["ref"]))
     url = value.get("url")
     if url:
-        safe_url = escape(str(url), quote=True)
+        # Strip surrounding whitespace from URL and escape it for safe inclusion in href.
+        # Additionally, do not render javascript: URLs as active links; render the escaped ref instead.
+        raw = str(url).strip()
+        lowered = raw.lower()
+        if lowered.startswith("javascript:"):
+            return ref
+        safe_url = escape(raw, quote=True)
         return f'<a href="{safe_url}">{ref}</a>'
     return ref
 
