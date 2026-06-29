@@ -24,6 +24,23 @@ def test_resolve_subiquity_reads_submodule_gitlink_from_matching_tag():
     assert source.url == "https://github.com/canonical/subiquity/commit/subiquity-sha"
 
 
+def test_resolve_subiquity_uses_bootstrap_version_hash_suffix_as_source_ref():
+    responses = {
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+            {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
+        ),
+    }
+    resolver = GithubResolver(lambda url: responses[url])
+
+    source, warnings = resolver.resolve_subiquity(
+        PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628")
+    )
+
+    assert warnings == ()
+    assert source is not None
+    assert source.ref == "subiquity-sha"
+
+
 def test_resolve_subiquity_returns_warning_when_no_bootstrap_version():
     resolver = GithubResolver(lambda url: "{}")
 
@@ -47,6 +64,25 @@ def test_resolve_secboot_reads_go_mod_from_matching_snapd_tag():
     assert source.name == "secboot"
     assert source.ref == "v0.0.0-20260629000000-abcdef123456"
     assert source.url == "https://github.com/snapcore/secboot/tree/v0.0.0-20260629000000-abcdef123456"
+
+
+def test_resolve_secboot_dereferences_annotated_snapd_tag_to_commit():
+    responses = {
+        "https://api.github.com/repos/snapcore/snapd/git/ref/tags/2.75.2": json.dumps(
+            {"object": {"sha": "tag-sha", "type": "tag"}}
+        ),
+        "https://api.github.com/repos/snapcore/snapd/git/tags/tag-sha": json.dumps(
+            {"object": {"sha": "commit-sha", "type": "commit"}}
+        ),
+        "https://raw.githubusercontent.com/snapcore/snapd/commit-sha/go.mod": "module github.com/snapcore/snapd\nrequire github.com/snapcore/secboot v0.0.0-20260629000000-abcdef123456\n",
+    }
+    resolver = GithubResolver(lambda url: responses[url])
+
+    source, warnings = resolver.resolve_secboot(PackageVersion("snapd", "2.75.2", "24718"))
+
+    assert warnings == ()
+    assert source is not None
+    assert source.ref == "v0.0.0-20260629000000-abcdef123456"
 
 
 def test_resolver_returns_unknown_warning_when_tag_lookup_fails():

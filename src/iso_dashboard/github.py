@@ -34,16 +34,41 @@ class GithubResolver:
                 # preserve diagnostic context for why a candidate failed
                 self._logger.debug("tag lookup failed for %s: %s", url, exc)
                 continue
-            sha = payload.get("object", {}).get("sha")
-            if isinstance(sha, str) and sha:
+            tag_object = payload.get("object", {})
+            sha = tag_object.get("sha")
+            if not isinstance(sha, str) or not sha:
+                continue
+            if tag_object.get("type") != "tag":
                 return sha
+            commit_sha = self._dereference_tag(owner, repo, sha)
+            if commit_sha:
+                return commit_sha
         return None
+
+    def _dereference_tag(self, owner: str, repo: str, tag_sha: str) -> str | None:
+        url = f"https://api.github.com/repos/{owner}/{repo}/git/tags/{tag_sha}"
+        try:
+            payload = json.loads(self._http_get(url))
+        except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+            self._logger.debug("annotated tag dereference failed for %s: %s", url, exc)
+            return None
+        tag_object = payload.get("object", {})
+        commit_sha = tag_object.get("sha")
+        if tag_object.get("type") == "commit" and isinstance(commit_sha, str) and commit_sha:
+            return commit_sha
+        return None
+
+    def _bootstrap_source_ref(self, version: str) -> str | None:
+        match = re.search(r"-([0-9a-f]{7,40})$", version)
+        if match:
+            return match.group(1)
+        return self._tag_sha("canonical", "ubuntu-desktop-provision", version)
 
     def resolve_subiquity(self, bootstrap: PackageVersion | None) -> tuple[SourceRef | None, tuple[str, ...]]:
         if bootstrap is None or bootstrap.version is None:
             return None, ("Cannot resolve subiquity because ubuntu-desktop-bootstrap snap is missing",)
 
-        source_sha = self._tag_sha("canonical", "ubuntu-desktop-provision", bootstrap.version)
+        source_sha = self._bootstrap_source_ref(bootstrap.version)
         if source_sha is None:
             return None, (f"Cannot map ubuntu-desktop-bootstrap version {bootstrap.version} to a canonical/ubuntu-desktop-provision source ref",)
 
