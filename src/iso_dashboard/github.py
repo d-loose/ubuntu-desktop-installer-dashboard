@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import urllib.request
 import urllib.error
@@ -19,9 +18,6 @@ def http_get_text(url: str) -> str:
         "User-Agent": "ubuntu-desktop-iso-dashboard",
         "Accept": "application/vnd.github+json",
     }
-    token = os.environ.get("GITHUB_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, timeout=30) as response:
         return response.read().decode("utf-8")

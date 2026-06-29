@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 
 from iso_dashboard import cli
 
@@ -77,27 +76,3 @@ def test_quiet_build_configures_warning_logging(monkeypatch, tmp_path):
     assert result == 0
     assert configured == [{"level": logging.WARNING, "format": "%(levelname)s:%(name)s:%(message)s"}]
 
-
-def test_build_command_sets_github_token_from_argument(monkeypatch, tmp_path):
-    class FakeCollector:
-        def collect_all(self):
-            from iso_dashboard.models import DashboardData
-
-            return DashboardData(generated_at="2026-06-29T12:00:00Z", records=())
-
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-    monkeypatch.setattr(cli, "Collector", lambda: FakeCollector())
-
-
-    result = cli.main([
-        "build",
-        "--data",
-        str(tmp_path / "latest.json"),
-        "--site",
-        str(tmp_path / "site"),
-        "--github-token",
-        "token-value",
-    ])
-
-    assert result == 0
-    assert os.environ["GITHUB_TOKEN"] == "token-value"

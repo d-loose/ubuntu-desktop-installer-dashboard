@@ -1,5 +1,4 @@
 import json
-import os
 import urllib.request
 
 from iso_dashboard.github import GithubResolver
@@ -7,34 +6,7 @@ from iso_dashboard.github import http_get_text
 from iso_dashboard.models import PackageVersion
 
 
-def test_http_get_text_uses_github_token_header_when_available(monkeypatch):
-    captured = []
-
-    class FakeResponse:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, traceback):
-            return False
-
-        def read(self):
-            return b"{}"
-
-    def fake_urlopen(request, timeout):
-        captured.append((request, timeout))
-        return FakeResponse()
-
-    monkeypatch.setenv("GITHUB_TOKEN", "token-value")
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-
-    assert http_get_text("https://api.github.com/example") == "{}"
-    request, timeout = captured[0]
-    assert timeout == 30
-    assert request.headers["Authorization"] == "Bearer token-value"
-    assert request.headers["Accept"] == "application/vnd.github+json"
-
-
-def test_http_get_text_omits_authorization_without_github_token(monkeypatch):
+def test_http_get_text_never_uses_authorization_header(monkeypatch):
     captured = []
 
     class FakeResponse:
@@ -51,11 +23,12 @@ def test_http_get_text_omits_authorization_without_github_token(monkeypatch):
         captured.append(request)
         return FakeResponse()
 
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "token-value")
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
 
     assert http_get_text("https://api.github.com/example") == "{}"
     assert "Authorization" not in captured[0].headers
+    assert captured[0].headers["Accept"] == "application/vnd.github+json"
 
 
 def test_resolve_subiquity_reads_submodule_gitlink_from_matching_tag():
