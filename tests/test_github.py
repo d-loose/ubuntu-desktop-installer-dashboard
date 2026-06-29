@@ -82,7 +82,7 @@ parts:
     source-type: git
 """,
         "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/7c278ba1b1353b2798caa96d1a536063841d5176": json.dumps(
-            {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
+            {"tree": [{"path": "packages/subiquity_client/subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
     resolver = GithubResolver(lambda url: responses[url])

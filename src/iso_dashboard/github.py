@@ -128,8 +128,9 @@ class GithubResolver:
             )
             return None
 
+        subiquity_paths = {"subiquity", "packages/subiquity_client/subiquity"}
         for entry in tree.get("tree", []):
-            if entry.get("path") == "subiquity" and entry.get("type") == "commit" and isinstance(entry.get("sha"), str):
+            if entry.get("path") in subiquity_paths and entry.get("type") == "commit" and isinstance(entry.get("sha"), str):
                 sha = entry["sha"]
                 return SourceRef("subiquity", sha, f"https://github.com/canonical/subiquity/commit/{sha}")
         return None
