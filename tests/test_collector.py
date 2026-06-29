@@ -59,6 +59,20 @@ def test_collect_record_builds_complete_pending_record():
     assert record.warnings == ()
 
 
+def test_collect_record_logs_key_steps(caplog):
+    responses = {
+        PENDING_URL: '<a href="noble-desktop-amd64.iso">noble-desktop-amd64.iso</a> 2026-06-29 10:15\n<a href="noble-desktop-amd64.manifest">noble-desktop-amd64.manifest</a> 2026-06-29 10:16',
+        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 1.2.3 42\nsnap:snapd 2.70 24718\nsnapd 2.70+ubuntu1\n",
+    }
+    collector = Collector(lambda url: responses[url], FakeResolver(), FakeSnapcraftResolver())
+
+    with caplog.at_level("INFO", logger="iso_dashboard.collector"):
+        collector.collect_record("noble", "amd64")
+
+    assert "Collecting noble amd64 from https://cdimage.ubuntu.com/noble/daily-live/pending/" in caplog.messages
+    assert "Fetching manifest https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest" in caplog.messages
+
+
 def test_collect_record_keeps_missing_record_when_listing_fetch_fails():
     def failing_get(url: str) -> str:
         raise RuntimeError("network unavailable")

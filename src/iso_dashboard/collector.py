@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
@@ -10,6 +11,8 @@ from iso_dashboard.github import GithubResolver, HttpClient, http_get_text
 from iso_dashboard.models import DashboardData, IsoRecord
 from iso_dashboard.parsers import find_artifact, parse_cdimage_listing, parse_manifest
 from iso_dashboard.snapcraft import SnapcraftResolver
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -33,6 +36,7 @@ class Collector:
 
     def collect_record(self, release: str, architecture: str) -> IsoRecord:
         base_url = pending_url(release)
+        LOGGER.info("Collecting %s %s from %s", release, architecture, base_url)
         warnings: list[str] = []
         try:
             listing = self._http_get(base_url)
@@ -50,6 +54,7 @@ class Collector:
         manifest_versions = None
         manifest_url = urljoin(base_url, manifest.href) if manifest else None
         if manifest_url:
+            LOGGER.info("Fetching manifest %s", manifest_url)
             try:
                 manifest_versions = parse_manifest(self._http_get(manifest_url))
             except Exception as exc:
@@ -68,9 +73,11 @@ class Collector:
                 warnings.append("Manifest does not include snapd deb")
 
         if bootstrap is not None:
+            LOGGER.info("Resolving %s snap revision %s for %s", bootstrap.name, bootstrap.revision, architecture)
             bootstrap, bootstrap_warnings = self._snapcraft_resolver.resolve_revision(bootstrap, architecture)
             warnings.extend(bootstrap_warnings)
         if snapd_snap is not None:
+            LOGGER.info("Resolving %s snap revision %s for %s", snapd_snap.name, snapd_snap.revision, architecture)
             snapd_snap, snapd_warnings = self._snapcraft_resolver.resolve_revision(snapd_snap, architecture)
             warnings.extend(snapd_warnings)
 

@@ -62,6 +62,21 @@ def test_resolve_subiquity_dereferences_plain_bootstrap_annotated_tag():
     assert source.ref == "subiquity-sha"
 
 
+def test_resolve_subiquity_logs_version_resolution(caplog):
+    responses = {
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+            {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
+        ),
+    }
+    resolver = GithubResolver(lambda url: responses[url])
+
+    with caplog.at_level("INFO", logger="iso_dashboard.github"):
+        resolver.resolve_subiquity(PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628"))
+
+    assert "Resolving subiquity for ubuntu-desktop-bootstrap version 26.04-b4490bc9b" in caplog.messages
+    assert "Using ubuntu-desktop-provision ref b4490bc9b for ubuntu-desktop-bootstrap version 26.04-b4490bc9b" in caplog.messages
+
+
 def test_resolve_subiquity_returns_warning_when_no_bootstrap_version():
     resolver = GithubResolver(lambda url: "{}")
 

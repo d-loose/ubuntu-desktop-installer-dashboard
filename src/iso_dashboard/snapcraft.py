@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -9,6 +10,7 @@ from iso_dashboard.models import PackageVersion
 
 SNAPCRAFT_REFRESH_URL = "https://api.snapcraft.io/v2/snaps/refresh"
 SNAPCRAFT_ARCHITECTURES = {"riscv": "riscv64"}
+LOGGER = logging.getLogger(__name__)
 
 JsonPostClient = Callable[[str, dict[str, str], dict[str, object]], str]
 
@@ -42,6 +44,7 @@ class SnapcraftResolver:
             "Snap-Device-Architecture": SNAPCRAFT_ARCHITECTURES.get(architecture, architecture),
             "Content-Type": "application/json",
         }
+        LOGGER.info("Resolving %s revision %s for %s via Snapcraft", snap.name, snap.revision, architecture)
         payload: dict[str, object] = {
             "context": [],
             "actions": [
@@ -64,6 +67,7 @@ class SnapcraftResolver:
             if resolved.get("name") == snap.name and str(resolved.get("revision")) == str(revision):
                 version = resolved.get("version")
                 if isinstance(version, str) and version:
+                    LOGGER.info("Resolved %s revision %s to version %s", snap.name, snap.revision, version)
                     return PackageVersion(snap.name, version, snap.revision), ()
 
         return snap, (f"Cannot resolve {snap.name} snap revision {snap.revision} via Snapcraft: response did not include snap",)

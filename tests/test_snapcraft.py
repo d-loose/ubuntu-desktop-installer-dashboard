@@ -55,6 +55,31 @@ def test_resolve_revision_uses_snapcraft_refresh_api_request():
     ]
 
 
+def test_resolve_revision_logs_lookup(caplog):
+    def post_json(url, headers, payload):
+        return json.dumps(
+            {
+                "results": [
+                    {
+                        "snap": {
+                            "name": "snapd",
+                            "version": "2.75.2",
+                            "revision": 24718,
+                        }
+                    }
+                ]
+            }
+        )
+
+    resolver = SnapcraftResolver(post_json)
+
+    with caplog.at_level("INFO", logger="iso_dashboard.snapcraft"):
+        resolver.resolve_revision(PackageVersion("snapd", None, "24718"), "amd64")
+
+    assert "Resolving snapd revision 24718 for amd64 via Snapcraft" in caplog.messages
+    assert "Resolved snapd revision 24718 to version 2.75.2" in caplog.messages
+
+
 def test_resolve_revision_returns_original_with_warning_when_lookup_fails():
     def failing_post(url, headers, payload):
         raise RuntimeError("snapcraft unavailable")

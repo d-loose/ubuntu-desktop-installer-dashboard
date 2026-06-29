@@ -10,6 +10,7 @@ from collections.abc import Callable
 from iso_dashboard.models import PackageVersion, SourceRef
 
 HttpClient = Callable[[str], str]
+LOGGER = logging.getLogger(__name__)
 
 
 def http_get_text(url: str) -> str:
@@ -21,8 +22,6 @@ def http_get_text(url: str) -> str:
 class GithubResolver:
     def __init__(self, http_get: HttpClient = http_get_text) -> None:
         self._http_get = http_get
-        # module-level logger to preserve diagnostic context on failures
-        self._logger = logging.getLogger(__name__)
 
     def _tag_sha(self, owner: str, repo: str, version: str) -> str | None:
         candidates = (version, f"v{version}")
@@ -32,7 +31,7 @@ class GithubResolver:
                 payload = json.loads(self._http_get(url))
             except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
                 # preserve diagnostic context for why a candidate failed
-                self._logger.debug("tag lookup failed for %s: %s", url, exc)
+                LOGGER.debug("tag lookup failed for %s: %s", url, exc)
                 continue
             tag_object = payload.get("object", {})
             sha = tag_object.get("sha")
@@ -50,7 +49,7 @@ class GithubResolver:
         try:
             payload = json.loads(self._http_get(url))
         except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
-            self._logger.debug("annotated tag dereference failed for %s: %s", url, exc)
+            LOGGER.debug("annotated tag dereference failed for %s: %s", url, exc)
             return None
         tag_object = payload.get("object", {})
         commit_sha = tag_object.get("sha")
@@ -68,9 +67,15 @@ class GithubResolver:
         if bootstrap is None or bootstrap.version is None:
             return None, ("Cannot resolve subiquity because ubuntu-desktop-bootstrap snap is missing",)
 
+        LOGGER.info("Resolving subiquity for ubuntu-desktop-bootstrap version %s", bootstrap.version)
         source_sha = self._bootstrap_source_ref(bootstrap.version)
         if source_sha is None:
             return None, (f"Cannot map ubuntu-desktop-bootstrap version {bootstrap.version} to a canonical/ubuntu-desktop-provision source ref",)
+        LOGGER.info(
+            "Using ubuntu-desktop-provision ref %s for ubuntu-desktop-bootstrap version %s",
+            source_sha,
+            bootstrap.version,
+        )
 
         try:
             tree = json.loads(
@@ -78,7 +83,7 @@ class GithubResolver:
             )
         except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             # keep the public warning unchanged but log the underlying failure for diagnostics
-            self._logger.warning(
+            LOGGER.warning(
                 "Cannot read ubuntu-desktop-provision tree %s for subiquity submodule: %s",
                 source_sha,
                 exc,
@@ -96,15 +101,17 @@ class GithubResolver:
         if snapd is None or snapd.version is None:
             return None, ("Cannot resolve secboot because snapd snap is missing",)
 
+        LOGGER.info("Resolving secboot for snapd version %s", snapd.version)
         source_sha = self._tag_sha("snapcore", "snapd", snapd.version)
         if source_sha is None:
             return None, (f"Cannot map snapd version {snapd.version} to a snapcore/snapd source ref",)
+        LOGGER.info("Using snapd source ref %s for snapd version %s", source_sha, snapd.version)
 
         try:
             go_mod = self._http_get(f"https://raw.githubusercontent.com/snapcore/snapd/{source_sha}/go.mod")
         except (RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             # keep the public warning unchanged but preserve context in logs
-            self._logger.warning("Cannot read snapd go.mod at source ref %s: %s", source_sha, exc)
+            LOGGER.warning("Cannot read snapd go.mod at source ref %s: %s", source_sha, exc)
             return None, (f"Cannot read snapd go.mod at source ref {source_sha}",)
 
         match = re.search(r"github\.com/snapcore/secboot\s+(\S+)", go_mod)
