@@ -39,3 +39,7 @@ The collector reads only `https://cdimage.ubuntu.com/<release>/daily-live/pendin
 ## Deployment
 
 `.github/workflows/pages.yml` runs daily at `06:17 UTC`, on manual dispatch, and publishes the generated `site/` directory to GitHub Pages.
+
+## Generated Files
+
+Local `data/latest.json` and `site/` outputs are ignored by git. The GitHub Actions workflow publishes them as Pages artifacts instead of committing generated data back to the repository.
