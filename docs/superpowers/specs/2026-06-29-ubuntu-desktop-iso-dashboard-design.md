@@ -1,0 +1,166 @@
+# Ubuntu Desktop ISO Version Dashboard Design
+
+## Overview
+
+Build a static generated dashboard that gives an overview of the latest Ubuntu Desktop ISO contents for selected releases and architectures.
+
+The dashboard tracks these releases:
+
+- `noble`
+- `resolute`
+- `stonking`
+
+The dashboard tracks these architectures:
+
+- `amd64`
+- `arm64`
+- `riscv`
+
+For each release and architecture pair, the dashboard shows the latest available ISO publication information and the versions or source references for:
+
+- `ubuntu-desktop-bootstrap` snap
+- `snapd` snap
+- `snapd` deb
+- `subiquity` shipped by `ubuntu-desktop-bootstrap`
+- `secboot` used by `snapd`
+
+The first version is latest-only. It does not keep historical snapshots.
+
+## Architecture
+
+The system has three parts:
+
+- A data collection script that fetches cdimage and upstream source metadata.
+- A generated JSON file at `data/latest.json`.
+- A static dashboard that renders `data/latest.json` without making external data requests.
+
+GitHub Actions runs the data collection and site build on a schedule and through `workflow_dispatch`. The generated static assets are published to GitHub Pages or equivalent static hosting.
+
+The release and architecture lists are checked-in configuration. They are not editable in the dashboard UI.
+
+## Data Collection
+
+For each release and architecture pair, the collector checks both cdimage locations:
+
+- `https://cdimage.ubuntu.com/<release>/daily-live/pending/`
+- `https://cdimage.ubuntu.com/<release>/daily-live/current/`
+
+The collector finds the matching desktop live ISO artifacts and `.manifest` files. When both `pending` and `current` contain matching artifacts, `pending` is preferred because it represents the newest candidate.
+
+The collector records the ISO source location as `pending`, `current`, or `missing`. It records the ISO publication timestamp from the cdimage directory listing or HTTP metadata when available.
+
+The manifest parser extracts:
+
+- `ubuntu-desktop-bootstrap` snap version and revision from snap entries in the manifest.
+- `snapd` snap version and revision from snap entries in the manifest.
+- `snapd` deb package version from deb entries in the manifest.
+
+If the ISO or manifest is missing for a release and architecture pair, the generated record remains present and includes a warning.
+
+## Upstream Source Resolution
+
+For `subiquity`, the collector maps the shipped `ubuntu-desktop-bootstrap` snap version or revision to the corresponding source ref in `canonical/ubuntu-desktop-provision`. It then reads the `subiquity` submodule gitlink commit and records that commit with a GitHub link.
+
+If the shipped `ubuntu-desktop-bootstrap` snap cannot be mapped to a source ref, the dashboard shows `unknown` for `subiquity` and keeps the shipped `ubuntu-desktop-bootstrap` version visible.
+
+For `secboot`, the collector maps the shipped `snapd` snap version or revision to the corresponding source ref in `snapcore/snapd`. It then reads the `secboot` dependency or vendored reference used by that source and records the resolved version or ref with a GitHub link.
+
+If the shipped `snapd` snap cannot be mapped to source, or the `secboot` reference cannot be resolved, the dashboard shows `unknown` for `secboot` and keeps both shipped `snapd` versions visible.
+
+## Generated Data Shape
+
+`data/latest.json` includes:
+
+- generation timestamp
+- configured releases
+- configured architectures
+- one record per release and architecture pair
+
+Each record includes:
+
+- release
+- architecture
+- ISO source location: `pending`, `current`, or `missing`
+- ISO URL when available
+- manifest URL when available
+- ISO publication timestamp when available
+- `ubuntu-desktop-bootstrap` snap version, revision, and source metadata when available
+- `snapd` snap version, revision, and source metadata when available
+- `snapd` deb version when available
+- resolved `subiquity` commit and link when available
+- resolved `secboot` version or ref and link when available
+- warnings describing missing or unresolved data
+
+The generated JSON is the dashboard's only runtime data source.
+
+## Dashboard UI
+
+The dashboard displays a matrix grouped by release, with one row per architecture.
+
+Each row shows:
+
+- ISO source location
+- ISO publication time
+- `ubuntu-desktop-bootstrap` snap version and revision
+- `snapd` snap version and revision
+- `snapd` deb version
+- `subiquity` resolved commit or `unknown`
+- `secboot` resolved version/ref or `unknown`
+- warnings for missing or unresolved data
+
+The top of the page shows:
+
+- data generation time
+- concise status summary
+
+The first version shows all configured release and architecture rows without UI filters. Filters can be added later if more releases or architectures are configured.
+
+The dashboard does not fetch cdimage or GitHub data directly from the browser.
+
+## Error Handling
+
+Per-release and per-architecture failures are represented as warnings in `data/latest.json`. They do not fail the whole scheduled job.
+
+The job fails for structural failures:
+
+- invalid checked-in configuration
+- collector script crash
+- malformed generated JSON
+- dashboard build failure
+- test failure
+
+This keeps the dashboard available even when daily images are temporarily incomplete.
+
+## Deployment
+
+GitHub Actions provides:
+
+- scheduled daily data refresh
+- manual `workflow_dispatch`
+- data generation for `data/latest.json`
+- static dashboard build
+- static site publication
+
+The generated site is suitable for GitHub Pages.
+
+## Testing
+
+Testing covers:
+
+- cdimage directory listing parsing with fixtures
+- manifest parsing for snap and deb entries with fixtures
+- upstream source metadata resolution with mocked GitHub responses
+- generated JSON shape validation
+- basic dashboard rendering against fixture data
+
+Tests should avoid relying on live network access.
+
+## Out Of Scope
+
+The first version does not include:
+
+- historical snapshots
+- trend charts
+- browser-side live fetching from cdimage or GitHub
+- user-editable release or architecture configuration
+- server-side runtime hosting
