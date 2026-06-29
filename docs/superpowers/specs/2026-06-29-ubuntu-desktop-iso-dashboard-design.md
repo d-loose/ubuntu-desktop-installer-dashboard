@@ -40,14 +40,13 @@ The release and architecture lists are checked-in configuration. They are not ed
 
 ## Data Collection
 
-For each release and architecture pair, the collector checks both cdimage locations:
+For each release and architecture pair, the collector checks only the cdimage pending location:
 
 - `https://cdimage.ubuntu.com/<release>/daily-live/pending/`
-- `https://cdimage.ubuntu.com/<release>/daily-live/current/`
 
-The collector finds the matching desktop live ISO artifacts and `.manifest` files. When both `pending` and `current` contain matching artifacts, `pending` is preferred because it represents the newest candidate.
+The collector finds the matching desktop live ISO artifacts and `.manifest` files in `pending`. It ignores `current` entirely.
 
-The collector records the ISO source location as `pending`, `current`, or `missing`. It records the ISO publication timestamp from the cdimage directory listing or HTTP metadata when available.
+The collector records the ISO source location as `pending` or `missing`. It records the ISO publication timestamp from the cdimage directory listing or HTTP metadata when available.
 
 The manifest parser extracts:
 
@@ -80,7 +79,7 @@ Each record includes:
 
 - release
 - architecture
-- ISO source location: `pending`, `current`, or `missing`
+- ISO source location: `pending` or `missing`
 - ISO URL when available
 - manifest URL when available
 - ISO publication timestamp when available
