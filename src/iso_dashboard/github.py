@@ -152,9 +152,9 @@ class GithubResolver:
             if in_ubuntu_bootstrap and stripped.endswith(":") and not line.startswith("    "):
                 return None
             if in_ubuntu_bootstrap and stripped.startswith("source-commit:"):
-                source_commit = stripped.split(":", 1)[1].strip().strip('"\'')
-                if re.fullmatch(r"[0-9a-f]{7,40}", source_commit):
-                    return source_commit
+                source_commit = re.search(r"[0-9a-f]{7,40}", stripped.split(":", 1)[1])
+                if source_commit:
+                    return source_commit.group(0)
         return None
 
     def resolve_secboot(self, snapd: PackageVersion | None) -> tuple[SourceRef | None, tuple[str, ...]]:

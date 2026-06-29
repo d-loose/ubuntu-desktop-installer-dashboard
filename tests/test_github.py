@@ -78,7 +78,7 @@ def test_resolve_subiquity_reads_source_commit_from_snap_branch_snapcraft_yaml()
 parts:
   ubuntu-bootstrap:
     source: .
-    source-commit: 7c278ba1b1353b2798caa96d1a536063841d5176
+    source-commit: &commit-ref 7c278ba1b1353b2798caa96d1a536063841d5176
     source-type: git
 """,
         "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/7c278ba1b1353b2798caa96d1a536063841d5176": json.dumps(
