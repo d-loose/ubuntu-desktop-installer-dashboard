@@ -9,6 +9,7 @@ from iso_dashboard.config import ARCHITECTURES, RELEASES, pending_url
 from iso_dashboard.github import GithubResolver, HttpClient, http_get_text
 from iso_dashboard.models import DashboardData, IsoRecord
 from iso_dashboard.parsers import find_artifact, parse_cdimage_listing, parse_manifest
+from iso_dashboard.snapcraft import SnapcraftResolver
 
 
 def _utc_now() -> datetime:
@@ -20,9 +21,15 @@ def _format_time(value: datetime) -> str:
 
 
 class Collector:
-    def __init__(self, http_get: HttpClient = http_get_text, resolver: GithubResolver | None = None) -> None:
+    def __init__(
+        self,
+        http_get: HttpClient = http_get_text,
+        resolver: GithubResolver | None = None,
+        snapcraft_resolver: SnapcraftResolver | None = None,
+    ) -> None:
         self._http_get = http_get
         self._resolver = resolver if resolver is not None else GithubResolver(http_get)
+        self._snapcraft_resolver = snapcraft_resolver if snapcraft_resolver is not None else SnapcraftResolver()
 
     def collect_record(self, release: str, architecture: str) -> IsoRecord:
         base_url = pending_url(release)
@@ -59,6 +66,13 @@ class Collector:
                 warnings.append("Manifest does not include snapd snap")
             if snapd_deb is None:
                 warnings.append("Manifest does not include snapd deb")
+
+        if bootstrap is not None:
+            bootstrap, bootstrap_warnings = self._snapcraft_resolver.resolve_revision(bootstrap, architecture)
+            warnings.extend(bootstrap_warnings)
+        if snapd_snap is not None:
+            snapd_snap, snapd_warnings = self._snapcraft_resolver.resolve_revision(snapd_snap, architecture)
+            warnings.extend(snapd_warnings)
 
         subiquity, subiquity_warnings = self._resolver.resolve_subiquity(bootstrap)
         secboot, secboot_warnings = self._resolver.resolve_secboot(snapd_snap)
