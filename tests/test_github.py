@@ -1,4 +1,5 @@
 import json
+import urllib.error
 import urllib.request
 
 from iso_dashboard.github import GithubResolver
@@ -102,6 +103,47 @@ def test_resolve_subiquity_logs_version_resolution(caplog):
 
     assert "Resolving subiquity for ubuntu-desktop-bootstrap version 26.04-b4490bc9b" in caplog.messages
     assert "Using ubuntu-desktop-provision ref b4490bc9b for ubuntu-desktop-bootstrap version 26.04-b4490bc9b" in caplog.messages
+
+
+def test_resolver_caches_github_fetches_for_repeated_refs():
+    calls = []
+    responses = {
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+            {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
+        ),
+    }
+
+    def http_get(url):
+        calls.append(url)
+        return responses[url]
+
+    resolver = GithubResolver(http_get)
+
+    resolver.resolve_subiquity(PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628"))
+    resolver.resolve_subiquity(PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "629"))
+
+    assert calls == ["https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b"]
+
+
+def test_resolver_stops_github_requests_after_rate_limit():
+    calls = []
+
+    def http_get(url):
+        calls.append(url)
+        raise urllib.error.HTTPError(url, 403, "rate limit exceeded", {}, None)
+
+    resolver = GithubResolver(http_get)
+
+    first_source, first_warnings = resolver.resolve_subiquity(
+        PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628")
+    )
+    second_source, second_warnings = resolver.resolve_secboot(PackageVersion("snapd", "2.75.2", "24718"))
+
+    assert first_source is None
+    assert first_warnings == ("Cannot read ubuntu-desktop-provision tree b4490bc9b for subiquity submodule",)
+    assert second_source is None
+    assert second_warnings == ("Skipping GitHub lookup for snapd version 2.75.2 because GitHub rate limit was already reached",)
+    assert calls == ["https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b"]
 
 
 def test_resolve_subiquity_returns_warning_when_no_bootstrap_version():

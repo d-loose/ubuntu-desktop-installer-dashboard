@@ -26,13 +26,30 @@ def http_get_text(url: str) -> str:
 class GithubResolver:
     def __init__(self, http_get: HttpClient = http_get_text) -> None:
         self._http_get = http_get
+        self._cache: dict[str, str] = {}
+        self._rate_limited = False
+
+    def _get(self, url: str) -> str:
+        if self._rate_limited:
+            raise RuntimeError("GitHub rate limit was already reached")
+        if url in self._cache:
+            LOGGER.debug("Using cached GitHub response for %s", url)
+            return self._cache[url]
+        try:
+            response = self._http_get(url)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 403 and "rate limit" in str(exc).lower():
+                self._rate_limited = True
+            raise
+        self._cache[url] = response
+        return response
 
     def _tag_sha(self, owner: str, repo: str, version: str) -> str | None:
         candidates = (version, f"v{version}")
         for candidate in candidates:
             url = f"https://api.github.com/repos/{owner}/{repo}/git/ref/tags/{candidate}"
             try:
-                payload = json.loads(self._http_get(url))
+                payload = json.loads(self._get(url))
             except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
                 # preserve diagnostic context for why a candidate failed
                 LOGGER.debug("tag lookup failed for %s: %s", url, exc)
@@ -51,7 +68,7 @@ class GithubResolver:
     def _dereference_tag(self, owner: str, repo: str, tag_sha: str) -> str | None:
         url = f"https://api.github.com/repos/{owner}/{repo}/git/tags/{tag_sha}"
         try:
-            payload = json.loads(self._http_get(url))
+            payload = json.loads(self._get(url))
         except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             LOGGER.debug("annotated tag dereference failed for %s: %s", url, exc)
             return None
@@ -70,6 +87,8 @@ class GithubResolver:
     def resolve_subiquity(self, bootstrap: PackageVersion | None) -> tuple[SourceRef | None, tuple[str, ...]]:
         if bootstrap is None or bootstrap.version is None:
             return None, ("Cannot resolve subiquity because ubuntu-desktop-bootstrap snap is missing",)
+        if self._rate_limited:
+            return None, (f"Skipping GitHub lookup for ubuntu-desktop-bootstrap version {bootstrap.version} because GitHub rate limit was already reached",)
 
         LOGGER.info("Resolving subiquity for ubuntu-desktop-bootstrap version %s", bootstrap.version)
         source_sha = self._bootstrap_source_ref(bootstrap.version)
@@ -83,7 +102,7 @@ class GithubResolver:
 
         try:
             tree = json.loads(
-                self._http_get(f"https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/{source_sha}")
+                self._get(f"https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/{source_sha}")
             )
         except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             # keep the public warning unchanged but log the underlying failure for diagnostics
@@ -104,6 +123,8 @@ class GithubResolver:
     def resolve_secboot(self, snapd: PackageVersion | None) -> tuple[SourceRef | None, tuple[str, ...]]:
         if snapd is None or snapd.version is None:
             return None, ("Cannot resolve secboot because snapd snap is missing",)
+        if self._rate_limited:
+            return None, (f"Skipping GitHub lookup for snapd version {snapd.version} because GitHub rate limit was already reached",)
 
         LOGGER.info("Resolving secboot for snapd version %s", snapd.version)
         source_sha = self._tag_sha("snapcore", "snapd", snapd.version)
@@ -112,7 +133,7 @@ class GithubResolver:
         LOGGER.info("Using snapd source ref %s for snapd version %s", source_sha, snapd.version)
 
         try:
-            go_mod = self._http_get(f"https://raw.githubusercontent.com/snapcore/snapd/{source_sha}/go.mod")
+            go_mod = self._get(f"https://raw.githubusercontent.com/snapcore/snapd/{source_sha}/go.mod")
         except (RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             # keep the public warning unchanged but preserve context in logs
             LOGGER.warning("Cannot read snapd go.mod at source ref %s: %s", source_sha, exc)
