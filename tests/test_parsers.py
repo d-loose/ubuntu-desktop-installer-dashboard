@@ -1,0 +1,44 @@
+from pathlib import Path
+
+from iso_dashboard.parsers import find_artifact, parse_cdimage_listing, parse_manifest
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_parse_cdimage_listing_extracts_artifacts_and_modified_times():
+    artifacts = parse_cdimage_listing((FIXTURES / "cdimage_pending.html").read_text())
+
+    assert artifacts[0].name == "noble-desktop-amd64.iso"
+    assert artifacts[0].href == "noble-desktop-amd64.iso"
+    assert artifacts[0].modified == "2026-06-29T10:15:00Z"
+    assert artifacts[1].name == "noble-desktop-amd64.manifest"
+    assert artifacts[1].modified == "2026-06-29T10:16:00Z"
+
+
+def test_find_artifact_matches_release_architecture_and_suffix():
+    artifacts = parse_cdimage_listing((FIXTURES / "cdimage_pending.html").read_text())
+
+    iso = find_artifact(artifacts, "noble", "amd64", ".iso")
+    manifest = find_artifact(artifacts, "noble", "amd64", ".manifest")
+    missing = find_artifact(artifacts, "noble", "riscv", ".iso")
+
+    assert iso is not None
+    assert iso.name == "noble-desktop-amd64.iso"
+    assert manifest is not None
+    assert manifest.name == "noble-desktop-amd64.manifest"
+    assert missing is None
+
+
+def test_parse_manifest_extracts_snap_and_deb_versions():
+    versions = parse_manifest((FIXTURES / "example.manifest").read_text())
+
+    assert versions.ubuntu_desktop_bootstrap is not None
+    assert versions.ubuntu_desktop_bootstrap.version == "1.2.3"
+    assert versions.ubuntu_desktop_bootstrap.revision == "42"
+    assert versions.snapd_snap is not None
+    assert versions.snapd_snap.version == "2.70"
+    assert versions.snapd_snap.revision == "24718"
+    assert versions.snapd_deb is not None
+    assert versions.snapd_deb.version == "2.70+ubuntu1"
+    assert versions.snapd_deb.revision is None

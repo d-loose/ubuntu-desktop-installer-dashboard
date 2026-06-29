@@ -1,0 +1,4 @@
+snap:ubuntu-desktop-bootstrap 1.2.3 42
+snap:snapd 2.70 24718
+snapd 2.70+ubuntu1
+other-package 1.0
