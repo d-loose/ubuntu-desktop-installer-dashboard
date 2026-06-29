@@ -41,6 +41,27 @@ def test_resolve_subiquity_uses_bootstrap_version_hash_suffix_as_source_ref():
     assert source.ref == "subiquity-sha"
 
 
+def test_resolve_subiquity_dereferences_plain_bootstrap_annotated_tag():
+    responses = {
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/ref/tags/26.04": json.dumps(
+            {"object": {"sha": "tag-sha", "type": "tag"}}
+        ),
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/tags/tag-sha": json.dumps(
+            {"object": {"sha": "commit-sha", "type": "commit"}}
+        ),
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/commit-sha": json.dumps(
+            {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
+        ),
+    }
+    resolver = GithubResolver(lambda url: responses[url])
+
+    source, warnings = resolver.resolve_subiquity(PackageVersion("ubuntu-desktop-bootstrap", "26.04", "628"))
+
+    assert warnings == ()
+    assert source is not None
+    assert source.ref == "subiquity-sha"
+
+
 def test_resolve_subiquity_returns_warning_when_no_bootstrap_version():
     resolver = GithubResolver(lambda url: "{}")
 
