@@ -100,25 +100,62 @@ class GithubResolver:
             bootstrap.version,
         )
 
+        subiquity = self._subiquity_from_tree(source_sha)
+        if subiquity:
+            return subiquity, ()
+        if self._rate_limited:
+            return None, (f"Cannot read ubuntu-desktop-provision tree {source_sha} for subiquity submodule",)
+
+        upstream_sha = self._ubuntu_bootstrap_source_commit(source_sha)
+        if upstream_sha:
+            LOGGER.info("Using ubuntu-bootstrap source commit %s from snapcraft.yaml", upstream_sha)
+            subiquity = self._subiquity_from_tree(upstream_sha)
+            if subiquity:
+                return subiquity, ()
+
+        return None, (f"Cannot find subiquity submodule in ubuntu-desktop-provision tree {source_sha}",)
+
+    def _subiquity_from_tree(self, source_sha: str) -> SourceRef | None:
         try:
             tree = json.loads(
                 self._get(f"https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/{source_sha}")
             )
         except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
-            # keep the public warning unchanged but log the underlying failure for diagnostics
             LOGGER.warning(
                 "Cannot read ubuntu-desktop-provision tree %s for subiquity submodule: %s",
                 source_sha,
                 exc,
             )
-            return None, (f"Cannot read ubuntu-desktop-provision tree {source_sha} for subiquity submodule",)
+            return None
 
         for entry in tree.get("tree", []):
             if entry.get("path") == "subiquity" and entry.get("type") == "commit" and isinstance(entry.get("sha"), str):
                 sha = entry["sha"]
-                return SourceRef("subiquity", sha, f"https://github.com/canonical/subiquity/commit/{sha}"), ()
+                return SourceRef("subiquity", sha, f"https://github.com/canonical/subiquity/commit/{sha}")
+        return None
 
-        return None, (f"Cannot find subiquity submodule in ubuntu-desktop-provision tree {source_sha}",)
+    def _ubuntu_bootstrap_source_commit(self, snap_branch_sha: str) -> str | None:
+        try:
+            snapcraft_yaml = self._get(
+                f"https://raw.githubusercontent.com/canonical/ubuntu-desktop-provision/{snap_branch_sha}/snap/snapcraft.yaml"
+            )
+        except (RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+            LOGGER.debug("Cannot read snapcraft.yaml at %s: %s", snap_branch_sha, exc)
+            return None
+
+        in_ubuntu_bootstrap = False
+        for line in snapcraft_yaml.splitlines():
+            stripped = line.strip()
+            if stripped == "ubuntu-bootstrap:":
+                in_ubuntu_bootstrap = True
+                continue
+            if in_ubuntu_bootstrap and stripped.endswith(":") and not line.startswith("    "):
+                return None
+            if in_ubuntu_bootstrap and stripped.startswith("source-commit:"):
+                source_commit = stripped.split(":", 1)[1].strip().strip('"\'')
+                if re.fullmatch(r"[0-9a-f]{7,40}", source_commit):
+                    return source_commit
+        return None
 
     def resolve_secboot(self, snapd: PackageVersion | None) -> tuple[SourceRef | None, tuple[str, ...]]:
         if snapd is None or snapd.version is None:

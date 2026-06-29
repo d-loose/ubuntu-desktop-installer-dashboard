@@ -69,6 +69,33 @@ def test_resolve_subiquity_uses_bootstrap_version_hash_suffix_as_source_ref():
     assert source.ref == "subiquity-sha"
 
 
+def test_resolve_subiquity_reads_source_commit_from_snap_branch_snapcraft_yaml():
+    responses = {
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+            {"tree": [{"path": "snap", "type": "tree", "sha": "snap-tree-sha"}]}
+        ),
+        "https://raw.githubusercontent.com/canonical/ubuntu-desktop-provision/b4490bc9b/snap/snapcraft.yaml": """
+parts:
+  ubuntu-bootstrap:
+    source: .
+    source-commit: 7c278ba1b1353b2798caa96d1a536063841d5176
+    source-type: git
+""",
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/7c278ba1b1353b2798caa96d1a536063841d5176": json.dumps(
+            {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
+        ),
+    }
+    resolver = GithubResolver(lambda url: responses[url])
+
+    source, warnings = resolver.resolve_subiquity(
+        PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628")
+    )
+
+    assert warnings == ()
+    assert source is not None
+    assert source.ref == "subiquity-sha"
+
+
 def test_resolve_subiquity_dereferences_plain_bootstrap_annotated_tag():
     responses = {
         "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/ref/tags/26.04": json.dumps(
