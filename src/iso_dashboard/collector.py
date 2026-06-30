@@ -23,18 +23,6 @@ def _format_time(value: datetime) -> str:
     return value.isoformat().replace("+00:00", "Z")
 
 
-def _iso_status(published_at: str | None, now: datetime) -> str:
-    if not published_at:
-        return "old"
-    try:
-        published = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-    except ValueError:
-        return "old"
-    if published.tzinfo is None:
-        return "old"
-    return "current" if published.astimezone(timezone.utc).date() == now.astimezone(timezone.utc).date() else "old"
-
-
 class Collector:
     def __init__(
         self,
@@ -46,15 +34,14 @@ class Collector:
         self._resolver = resolver if resolver is not None else GithubResolver(http_get)
         self._snapcraft_resolver = snapcraft_resolver if snapcraft_resolver is not None else SnapcraftResolver()
 
-    def collect_record(self, release: str, architecture: str, now: datetime | None = None) -> IsoRecord:
+    def collect_record(self, release: str, architecture: str) -> IsoRecord:
         base_url = pending_url(release)
         LOGGER.info("Collecting %s %s from %s", release, architecture, base_url)
         warnings: list[str] = []
-        run_time = now if now is not None else _utc_now()
         try:
             listing = self._http_get(base_url)
         except Exception as exc:
-            return IsoRecord(release, architecture, "missing", None, None, None, None, None, None, None, None, (f"Cannot fetch pending listing for {release}: {exc}",))
+            return IsoRecord(release, architecture, None, None, None, None, None, None, None, None, (f"Cannot fetch pending listing for {release}: {exc}",))
 
         artifacts = parse_cdimage_listing(listing)
         iso = find_artifact(artifacts, release, architecture, ".iso")
@@ -102,7 +89,6 @@ class Collector:
         return IsoRecord(
             release=release,
             architecture=architecture,
-            iso_source=_iso_status(iso.modified, run_time) if iso and manifest else "missing",
             iso_url=urljoin(base_url, iso.href) if iso else None,
             manifest_url=manifest_url,
             published_at=iso.modified if iso else None,
@@ -117,7 +103,7 @@ class Collector:
     def collect_all(self, now: datetime | None = None) -> DashboardData:
         run_time = now if now is not None else _utc_now()
         generated_at = _format_time(run_time)
-        records = tuple(self.collect_record(release, architecture, now=run_time) for release in RELEASES for architecture in ARCHITECTURES)
+        records = tuple(self.collect_record(release, architecture) for release in RELEASES for architecture in ARCHITECTURES)
         return DashboardData(generated_at=generated_at, records=records)
 
 

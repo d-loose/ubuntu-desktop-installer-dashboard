@@ -12,7 +12,6 @@ def sample_payload():
             {
                 "release": "noble",
                 "architecture": "amd64",
-                "iso_source": "current",
                 "iso_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.iso",
                 "manifest_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest",
                 "published_at": "2026-06-29T10:15:00Z",
@@ -34,7 +33,6 @@ def sample_payload():
             {
                 "release": "noble",
                 "architecture": "arm64",
-                "iso_source": "missing",
                 "iso_url": None,
                 "manifest_url": None,
                 "published_at": None,
@@ -48,7 +46,6 @@ def sample_payload():
             {
                 "release": "noble-old",
                 "architecture": "amd64",
-                "iso_source": "old",
                 "iso_url": "https://cdimage.ubuntu.com/noble-old/daily-live/pending/noble-old-desktop-amd64.iso",
                 "manifest_url": "https://cdimage.ubuntu.com/noble-old/daily-live/pending/noble-old-desktop-amd64.manifest",
                 "published_at": "2026-06-28T22:05:00Z",
@@ -140,6 +137,15 @@ def test_escapes_malicious_html_in_warnings_and_source():
     assert "javascript:alert(2)" not in html.lower()
 
 
+def test_render_ignores_legacy_iso_source_field():
+    payload = sample_payload()
+    payload["records"][0]["iso_source"] = "missing"
+
+    html = render_dashboard(payload)
+
+    assert 'data-status="current"' in html
+
+
 def test_source_url_scheme_hardening():
     # Ensure unsafe URL schemes are not rendered as links or visible URL text
     payload = sample_payload()
@@ -156,7 +162,6 @@ def test_source_url_scheme_hardening():
         {
             "release": "noble",
             "architecture": "riscv64",
-            "iso_source": "missing",
             "published_at": None,
             "ubuntu_desktop_bootstrap": None,
             "snapd_snap": None,

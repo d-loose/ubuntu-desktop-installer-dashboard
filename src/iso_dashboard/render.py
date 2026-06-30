@@ -97,15 +97,31 @@ def _card_status_class(status: str) -> str:
 
 
 def _published_at(value: object) -> str:
-    if not value:
+    parsed = _parse_utc(value)
+    if parsed is None:
         return "unknown"
+    return escape(parsed.strftime("%-d %b %Y, %H:%M UTC"))
+
+
+def _parse_utc(value: object) -> datetime | None:
+    if not value:
+        return None
     try:
         parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except ValueError:
-        return "unknown"
+        return None
     if parsed.tzinfo is None:
-        return "unknown"
-    return escape(parsed.astimezone(timezone.utc).strftime("%-d %b %Y, %H:%M UTC"))
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _iso_status(record: dict[str, object], generated_at: datetime | None) -> str:
+    if not record.get("iso_url") or not record.get("manifest_url"):
+        return "missing"
+    published = _parse_utc(record.get("published_at"))
+    if published is None or generated_at is None:
+        return "old"
+    return "current" if published.date() == generated_at.date() else "old"
 
 
 def _detail(label: str, value: str) -> str:
@@ -121,13 +137,16 @@ def render_dashboard(payload: dict[str, object]) -> str:
     cards_by_architecture: dict[str, list[str]] = {}
     records = payload.get("records", [])
     assert isinstance(records, list)
+    generated_at_raw = payload.get("generated_at", "unknown")
+    generated_at = escape(str(generated_at_raw))
+    generated_at_dt = _parse_utc(generated_at_raw)
     for record in records:
         assert isinstance(record, dict)
         warnings = record.get("warnings", [])
         assert isinstance(warnings, list)
         release = str(record.get("release", "unknown"))
         architecture = str(record.get("architecture", "unknown"))
-        status = str(record.get("iso_source", "missing"))
+        status = _iso_status(record, generated_at_dt)
         card_status_class = _card_status_class(status)
         warning_count = len(warnings)
         warning_content = _warnings(warnings)
@@ -159,7 +178,6 @@ def render_dashboard(payload: dict[str, object]) -> str:
 """
         cards_by_architecture.setdefault(architecture, []).append(card)
 
-    generated_at = escape(str(payload.get("generated_at", "unknown")))
     architectures = payload.get("architectures", [])
     if not isinstance(architectures, list):
         architectures = []

@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from iso_dashboard.collector import Collector, _iso_status, write_dashboard_json
+from iso_dashboard.collector import Collector, write_dashboard_json
 from iso_dashboard.models import PackageVersion, SourceRef
 
 
@@ -41,11 +41,10 @@ def test_collect_record_builds_complete_pending_record():
     resolver = FakeResolver()
     collector = Collector(lambda url: responses[url], resolver, FakeSnapcraftResolver())
 
-    record = collector.collect_record("noble", "amd64", now=datetime(2026, 6, 29, 12, 0, tzinfo=timezone.utc))
+    record = collector.collect_record("noble", "amd64")
 
     assert record.release == "noble"
     assert record.architecture == "amd64"
-    assert record.iso_source == "current"
     assert record.iso_url == "https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/noble-desktop-amd64.iso"
     assert record.manifest_url == MANIFEST_URL
     assert record.published_at == "2026-06-29T10:15:00Z"
@@ -57,38 +56,6 @@ def test_collect_record_builds_complete_pending_record():
     assert record.subiquity.ref == "subiquity-sha"
     assert record.secboot.ref == "v1"
     assert record.warnings == ()
-
-
-def test_collect_record_marks_found_iso_old_when_published_before_run_date():
-    responses = {
-        PENDING_URL: '<a href="noble-desktop-amd64.iso">noble-desktop-amd64.iso</a> 2026-06-28 23:59\n<a href="noble-desktop-amd64.manifest">noble-desktop-amd64.manifest</a> 2026-06-29 10:16',
-        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 1.2.3 42\nsnap:snapd 2.70 24718\nsnapd 2.70+ubuntu1\n",
-    }
-    collector = Collector(lambda url: responses[url], FakeResolver(), FakeSnapcraftResolver())
-
-    record = collector.collect_record("noble", "amd64", now=datetime(2026, 6, 29, 12, 0, tzinfo=timezone.utc))
-
-    assert record.iso_source == "old"
-    assert record.published_at == "2026-06-28T23:59:00Z"
-
-
-def test_collect_record_marks_found_iso_old_when_timestamp_missing():
-    responses = {
-        PENDING_URL: '<a href="noble-desktop-amd64.iso">noble-desktop-amd64.iso</a>\n<a href="noble-desktop-amd64.manifest">noble-desktop-amd64.manifest</a> 2026-06-29 10:16',
-        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 1.2.3 42\nsnap:snapd 2.70 24718\nsnapd 2.70+ubuntu1\n",
-    }
-    collector = Collector(lambda url: responses[url], FakeResolver(), FakeSnapcraftResolver())
-
-    record = collector.collect_record("noble", "amd64", now=datetime(2026, 6, 29, 12, 0, tzinfo=timezone.utc))
-
-    assert record.iso_source == "old"
-    assert record.published_at is None
-
-
-def test_iso_status_marks_naive_timestamp_old():
-    status = _iso_status("2026-06-29T10:15:00", datetime(2026, 6, 29, 12, 0, tzinfo=timezone.utc))
-
-    assert status == "old"
 
 
 def test_collect_record_logs_key_steps(caplog):
@@ -113,7 +80,6 @@ def test_collect_record_keeps_missing_record_when_listing_fetch_fails():
 
     record = collector.collect_record("noble", "amd64")
 
-    assert record.iso_source == "missing"
     assert record.iso_url is None
     assert record.manifest_url is None
     assert record.warnings == ("Cannot fetch pending listing for noble: network unavailable",)

@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Literal
 
 from iso_dashboard.config import ARCHITECTURES, RELEASES
-
-IsoSource = Literal["current", "old", "missing"]
-
 
 @dataclass(frozen=True)
 class PackageVersion:
@@ -26,7 +22,6 @@ class SourceRef:
 class IsoRecord:
     release: str
     architecture: str
-    iso_source: IsoSource
     iso_url: str | None
     manifest_url: str | None
     published_at: str | None

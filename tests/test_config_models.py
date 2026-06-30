@@ -16,7 +16,6 @@ def test_dashboard_data_serializes_nested_records():
     record = IsoRecord(
         release="noble",
         architecture="amd64",
-        iso_source="pending",
         iso_url="https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.iso",
         manifest_url="https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest",
         published_at="2026-06-29T10:00:00Z",
@@ -37,7 +36,6 @@ def test_dashboard_data_serializes_nested_records():
             {
                 "release": "noble",
                 "architecture": "amd64",
-                "iso_source": "pending",
                 "iso_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.iso",
                 "manifest_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest",
                 "published_at": "2026-06-29T10:00:00Z",
