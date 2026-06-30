@@ -37,8 +37,11 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "data-release-filter" in html
     assert "data-status-filter" in html
     assert "data-iso-card" in html
+    assert "data-release-section" in html
     assert "<details" in html
     assert "function filterCards" in html
+    assert "DOMContentLoaded" in html
+    assert "section.hidden = !hasVisibleCards" in html
     assert "Generated: 2026-06-29T12:00:00Z" in html
     assert "noble" in html
     assert "amd64" in html

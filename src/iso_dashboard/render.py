@@ -155,17 +155,31 @@ def render_dashboard(payload: dict[str, object]) -> str:
     {sections}
   </main>
   <script>
-    function filterCards() {{
-      const release = document.querySelector('[data-release-filter]').value;
-      const status = document.querySelector('[data-status-filter]').value;
-      document.querySelectorAll('[data-iso-card]').forEach((card) => {{
-        const releaseMatch = !release || card.dataset.release === release;
-        const statusMatch = !status || card.dataset.status === status;
-        card.hidden = !(releaseMatch && statusMatch);
-      }});
-    }}
-    document.querySelector('[data-release-filter]').addEventListener('change', filterCards);
-    document.querySelector('[data-status-filter]').addEventListener('change', filterCards);
+    document.addEventListener('DOMContentLoaded', () => {{
+      const releaseFilter = document.querySelector('[data-release-filter]');
+      const statusFilter = document.querySelector('[data-status-filter]');
+      if (!releaseFilter || !statusFilter) {{
+        return;
+      }}
+
+      function filterCards() {{
+        const release = releaseFilter.value;
+        const status = statusFilter.value;
+        document.querySelectorAll('[data-iso-card]').forEach((card) => {{
+          const releaseMatch = !release || card.dataset.release === release;
+          const statusMatch = !status || card.dataset.status === status;
+          card.hidden = !(releaseMatch && statusMatch);
+        }});
+        document.querySelectorAll('[data-release-section]').forEach((section) => {{
+          const hasVisibleCards = Array.from(section.querySelectorAll('[data-iso-card]')).some((card) => !card.hidden);
+          section.hidden = !hasVisibleCards;
+        }});
+      }}
+
+      releaseFilter.addEventListener('change', filterCards);
+      statusFilter.addEventListener('change', filterCards);
+      filterCards();
+    }});
   </script>
 </body>
 </html>
