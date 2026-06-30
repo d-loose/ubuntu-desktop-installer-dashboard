@@ -168,10 +168,11 @@ def render_dashboard(payload: dict[str, object]) -> str:
         document.querySelectorAll('[data-iso-card]').forEach((card) => {{
           const releaseMatch = !release || card.dataset.release === release;
           const statusMatch = !status || card.dataset.status === status;
-          card.hidden = !(releaseMatch && statusMatch);
+          const visible = releaseMatch && statusMatch;
+          card.style.display = visible ? '' : 'none';
         }});
         document.querySelectorAll('[data-release-section]').forEach((section) => {{
-          const hasVisibleCards = Array.from(section.querySelectorAll('[data-iso-card]')).some((card) => !card.hidden);
+          const hasVisibleCards = Array.from(section.querySelectorAll('[data-iso-card]')).some((card) => card.style.display !== 'none');
           section.hidden = !hasVisibleCards;
         }});
       }}

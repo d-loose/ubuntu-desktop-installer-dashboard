@@ -22,7 +22,21 @@ def sample_payload():
                 "subiquity": {"name": "subiquity", "ref": "subiquity-sha", "url": "https://github.com/canonical/subiquity/commit/subiquity-sha"},
                 "secboot": {"name": "secboot", "ref": "v1", "url": "https://github.com/snapcore/secboot/tree/v1"},
                 "warnings": [],
-            }
+            },
+            {
+                "release": "noble",
+                "architecture": "arm64",
+                "iso_source": "missing",
+                "iso_url": None,
+                "manifest_url": None,
+                "published_at": None,
+                "ubuntu_desktop_bootstrap": None,
+                "snapd_snap": None,
+                "snapd_deb": None,
+                "subiquity": None,
+                "secboot": None,
+                "warnings": ["Missing pending ISO for noble arm64"],
+            },
         ],
     }
 
@@ -42,6 +56,11 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "function filterCards" in html
     assert "DOMContentLoaded" in html
     assert "section.hidden = !hasVisibleCards" in html
+    assert 'option value="pending">pending</option>' in html
+    assert 'option value="missing">missing</option>' in html
+    assert 'data-status="pending"' in html
+    assert 'data-status="missing"' in html
+    assert "card.style.display = visible ? '' : 'none'" in html
     assert "Generated: 2026-06-29T12:00:00Z" in html
     assert "noble" in html
     assert "amd64" in html
