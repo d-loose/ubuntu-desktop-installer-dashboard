@@ -6,8 +6,8 @@ from iso_dashboard.collector import Collector, write_dashboard_json
 from iso_dashboard.models import PackageVersion, SourceRef
 
 
-PENDING_URL = "https://cdimage.ubuntu.com/noble/daily-live/pending/"
-MANIFEST_URL = "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest"
+PENDING_URL = "https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/"
+MANIFEST_URL = "https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/noble-desktop-amd64.manifest"
 
 
 class FakeResolver:
@@ -46,7 +46,7 @@ def test_collect_record_builds_complete_pending_record():
     assert record.release == "noble"
     assert record.architecture == "amd64"
     assert record.iso_source == "pending"
-    assert record.iso_url == "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.iso"
+    assert record.iso_url == "https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/noble-desktop-amd64.iso"
     assert record.manifest_url == MANIFEST_URL
     assert record.published_at == "2026-06-29T10:15:00Z"
     assert record.ubuntu_desktop_bootstrap.version == "26.04-3b3d4a4cc"
@@ -69,8 +69,8 @@ def test_collect_record_logs_key_steps(caplog):
     with caplog.at_level("INFO", logger="iso_dashboard.collector"):
         collector.collect_record("noble", "amd64")
 
-    assert "Collecting noble amd64 from https://cdimage.ubuntu.com/noble/daily-live/pending/" in caplog.messages
-    assert "Fetching manifest https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest" in caplog.messages
+    assert "Collecting noble amd64 from https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/" in caplog.messages
+    assert "Fetching manifest https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/noble-desktop-amd64.manifest" in caplog.messages
 
 
 def test_collect_record_keeps_missing_record_when_listing_fetch_fails():

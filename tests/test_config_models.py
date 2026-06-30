@@ -8,7 +8,7 @@ def test_configured_release_and_architecture_lists_are_exact():
 
 
 def test_pending_url_uses_only_pending_location():
-    assert pending_url("noble") == "https://cdimage.ubuntu.com/noble/daily-live/pending/"
+    assert pending_url("noble") == "https://cdimage.ubuntu.com/ubuntu/noble/daily-live/pending/"
     assert "current" not in pending_url("noble")
 
 
