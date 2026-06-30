@@ -7,7 +7,7 @@ def sample_payload():
     return {
         "generated_at": "2026-06-29T12:00:00Z",
         "releases": ["noble"],
-        "architectures": ["amd64"],
+        "architectures": ["amd64", "arm64"],
         "records": [
             {
                 "release": "noble",
@@ -56,19 +56,27 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "https://assets.ubuntu.com/v1/vanilla-framework-version-" in html
     assert "p-navigation" not in html
     assert "p-strip" in html
-    assert "data-release-filter" in html
-    assert "data-status-filter" in html
+    assert "data-architecture-filter" in html
+    assert "data-release-filter" not in html
+    assert "data-status-filter" not in html
     assert "data-iso-card" in html
-    assert "data-release-section" in html
+    assert "data-architecture-section" in html
     assert "<details" in html
     assert "function filterCards" in html
     assert "DOMContentLoaded" in html
     assert "section.hidden = !hasVisibleCards" in html
-    assert 'option value="pending">pending</option>' in html
-    assert 'option value="missing">missing</option>' in html
+    assert '<option value="amd64" selected>amd64</option>' in html
+    assert '<option value="arm64">arm64</option>' in html
+    assert 'data-architecture="amd64"' in html
+    assert 'data-architecture="arm64"' in html
+    assert 'data-architecture-section="amd64"' in html
+    assert 'data-architecture-section="arm64"' in html
     assert 'data-status="pending"' in html
     assert 'data-status="missing"' in html
+    assert "const architecture = architectureFilter.value" in html
+    assert "card.dataset.architecture === architecture" in html
     assert "card.style.display = visible ? '' : 'none'" in html
+    assert "statusFilter" not in html
     assert "Generated: 2026-06-29T12:00:00Z" in html
     assert "noble" in html
     assert "amd64" in html

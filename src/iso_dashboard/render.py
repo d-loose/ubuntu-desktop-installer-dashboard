@@ -97,7 +97,7 @@ def _detail(label: str, value: str) -> str:
 
 
 def render_dashboard(payload: dict[str, object]) -> str:
-    cards_by_release: dict[str, list[str]] = {}
+    cards_by_architecture: dict[str, list[str]] = {}
     records = payload.get("records", [])
     assert isinstance(records, list)
     for record in records:
@@ -121,10 +121,10 @@ def render_dashboard(payload: dict[str, object]) -> str:
             ]
         )
         card = f"""
-          <div class="col-4" data-iso-card data-release="{escape(release, quote=True)}" data-status="{escape(status, quote=True)}">
+          <div class="col-4" data-iso-card data-architecture="{escape(architecture, quote=True)}" data-release="{escape(release, quote=True)}" data-status="{escape(status, quote=True)}">
             <div class="p-card--highlighted {card_status_class}">
               <div class="u-clearfix">
-                <h3>{escape(architecture)}</h3>
+                <h3>{escape(release)}</h3>
                 <p class="u-align--right">{_status(status)}</p>
               </div>
               <p><strong>Published:</strong> {escape(str(record.get("published_at") or "unknown"))}</p>
@@ -136,29 +136,30 @@ def render_dashboard(payload: dict[str, object]) -> str:
             </div>
           </div>
 """
-        cards_by_release.setdefault(release, []).append(card)
+        cards_by_architecture.setdefault(architecture, []).append(card)
 
     generated_at = escape(str(payload.get("generated_at", "unknown")))
-    releases = payload.get("releases", [])
-    if not isinstance(releases, list):
-        releases = []
-    release_options = "".join(
-        f"<option value=\"{escape(str(release), quote=True)}\">{escape(str(release))}</option>"
-        for release in releases
+    architectures = payload.get("architectures", [])
+    if not isinstance(architectures, list):
+        architectures = []
+    default_architecture = "amd64" if "amd64" in architectures else (str(architectures[0]) if architectures else "")
+    architecture_options = "".join(
+        f"<option value=\"{escape(str(architecture), quote=True)}\"{' selected' if str(architecture) == default_architecture else ''}>{escape(str(architecture))}</option>"
+        for architecture in architectures
     )
     sections = "".join(
         f"""
-    <section class="p-strip is-shallow" data-release-section="{escape(release, quote=True)}">
+    <section class="p-strip is-shallow" data-architecture-section="{escape(architecture, quote=True)}">
       <div class="row">
         <div class="col-12">
-          <p class="p-muted-heading">Release</p>
-          <h2>{escape(release)}</h2>
+          <p class="p-muted-heading">Architecture</p>
+          <h2>{escape(architecture)}</h2>
         </div>
       </div>
       <div class="row">{''.join(cards)}</div>
     </section>
 """
-        for release, cards in cards_by_release.items()
+        for architecture, cards in cards_by_architecture.items()
     )
     return f"""<!doctype html>
 <html lang="en">
@@ -187,18 +188,9 @@ def render_dashboard(payload: dict[str, object]) -> str:
         <div class="col-12">
           <form class="p-form p-form--inline" aria-label="Dashboard filters">
             <div class="p-form__group">
-              <label for="release-filter">Release</label>
-              <select id="release-filter" data-release-filter>
-                <option value="">All releases</option>
-                {release_options}
-              </select>
-            </div>
-            <div class="p-form__group">
-              <label for="status-filter">Status</label>
-              <select id="status-filter" data-status-filter>
-                <option value="">All statuses</option>
-                <option value="pending">pending</option>
-                <option value="missing">missing</option>
+              <label for="architecture-filter">Architecture</label>
+              <select id="architecture-filter" data-architecture-filter>
+                {architecture_options}
               </select>
             </div>
           </form>
@@ -209,29 +201,24 @@ def render_dashboard(payload: dict[str, object]) -> str:
   </main>
   <script>
     document.addEventListener('DOMContentLoaded', () => {{
-      const releaseFilter = document.querySelector('[data-release-filter]');
-      const statusFilter = document.querySelector('[data-status-filter]');
-      if (!releaseFilter || !statusFilter) {{
+      const architectureFilter = document.querySelector('[data-architecture-filter]');
+      if (!architectureFilter) {{
         return;
       }}
 
       function filterCards() {{
-        const release = releaseFilter.value;
-        const status = statusFilter.value;
+        const architecture = architectureFilter.value;
         document.querySelectorAll('[data-iso-card]').forEach((card) => {{
-          const releaseMatch = !release || card.dataset.release === release;
-          const statusMatch = !status || card.dataset.status === status;
-          const visible = releaseMatch && statusMatch;
+          const visible = !architecture || card.dataset.architecture === architecture;
           card.style.display = visible ? '' : 'none';
         }});
-        document.querySelectorAll('[data-release-section]').forEach((section) => {{
+        document.querySelectorAll('[data-architecture-section]').forEach((section) => {{
           const hasVisibleCards = Array.from(section.querySelectorAll('[data-iso-card]')).some((card) => card.style.display !== 'none');
           section.hidden = !hasVisibleCards;
         }});
       }}
 
-      releaseFilter.addEventListener('change', filterCards);
-      statusFilter.addEventListener('change', filterCards);
+      architectureFilter.addEventListener('change', filterCards);
       filterCards();
     }});
   </script>
