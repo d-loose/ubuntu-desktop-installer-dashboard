@@ -126,6 +126,14 @@ def _subiquity_match(source: dict[str, object] | None, snap: dict[str, object] |
     return '<span class="p-chip--caution">subiquity mismatch</span>'
 
 
+def _snapd_details(snap: dict[str, object] | None, deb: dict[str, object] | None) -> str:
+    return f"snap: {_package(snap)}<br>deb: {_package(deb)}"
+
+
+def _subiquity_details(source: dict[str, object] | None, snap: dict[str, object] | None) -> str:
+    return f"snap: {_package(snap)}<br>source: {_source(source)}<br>{_subiquity_match(source, snap)}"
+
+
 def _parse_utc(value: object) -> datetime | None:
     if not value:
         return None
@@ -177,11 +185,8 @@ def render_dashboard(payload: dict[str, object]) -> str:
         details = "".join(
             [
                 _detail("ubuntu-desktop-bootstrap", _package(record.get("ubuntu_desktop_bootstrap"))),
-                _detail("snapd snap", _package(record.get("snapd_snap"))),
-                _detail("snapd deb", _package(record.get("snapd_deb"))),
-                _detail("subiquity snap", _package(record.get("subiquity_snap"))),
-                _detail("subiquity source", _source(record.get("subiquity"))),
-                _detail("subiquity check", _subiquity_match(record.get("subiquity"), record.get("subiquity_snap"))),
+                _detail("snapd", _snapd_details(record.get("snapd_snap"), record.get("snapd_deb"))),
+                _detail("subiquity", _subiquity_details(record.get("subiquity"), record.get("subiquity_snap"))),
                 _detail("secboot", _source(record.get("secboot"))),
             ]
         )

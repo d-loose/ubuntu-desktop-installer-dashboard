@@ -96,8 +96,13 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "noble" in html
     assert "amd64" in html
     assert "1.2.3 (channel 26.04/stable/ubuntu-26.04.1, rev 42)" in html
-    assert "subiquity snap" in html
-    assert "subiquity source" in html
+    assert "snapd snap" not in html
+    assert "snapd deb" not in html
+    assert "subiquity snap" not in html
+    assert "subiquity source" not in html
+    assert "subiquity check" not in html
+    assert "snap: 2.70 (channel stable, rev 24718)<br>deb: 2.70+ubuntu1" in html
+    assert "snap: 26.04+git18.64b0c70 (channel 26.04/stable/ubuntu-26.04.1, rev 1234)<br>source:" in html
     assert "subiquity match" in html
     assert "2.70 (channel stable, rev 24718)" in html
     assert "2.70+ubuntu1" in html
