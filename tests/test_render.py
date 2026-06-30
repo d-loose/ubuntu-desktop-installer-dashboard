@@ -12,7 +12,7 @@ def sample_payload():
             {
                 "release": "noble",
                 "architecture": "amd64",
-                "iso_source": "pending",
+                "iso_source": "current",
                 "iso_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.iso",
                 "manifest_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest",
                 "published_at": "2026-06-29T10:15:00Z",
@@ -45,6 +45,20 @@ def sample_payload():
                 "secboot": None,
                 "warnings": ["Missing pending ISO for noble arm64"],
             },
+            {
+                "release": "noble-old",
+                "architecture": "amd64",
+                "iso_source": "old",
+                "iso_url": "https://cdimage.ubuntu.com/noble-old/daily-live/pending/noble-old-desktop-amd64.iso",
+                "manifest_url": "https://cdimage.ubuntu.com/noble-old/daily-live/pending/noble-old-desktop-amd64.manifest",
+                "published_at": "2026-06-28T22:05:00Z",
+                "ubuntu_desktop_bootstrap": None,
+                "snapd_snap": None,
+                "snapd_deb": None,
+                "subiquity": None,
+                "secboot": None,
+                "warnings": [],
+            },
         ],
     }
 
@@ -71,13 +85,16 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert 'data-architecture="arm64"' in html
     assert 'data-architecture-section="amd64"' in html
     assert 'data-architecture-section="arm64"' in html
-    assert 'data-status="pending"' in html
+    assert 'data-status="current"' in html
+    assert 'data-status="old"' in html
     assert 'data-status="missing"' in html
     assert "const architecture = architectureFilter.value" in html
     assert "card.dataset.architecture === architecture" in html
     assert "card.style.display = visible ? '' : 'none'" in html
     assert "statusFilter" not in html
     assert "Generated: 2026-06-29T12:00:00Z" in html
+    assert "29 Jun 2026, 10:15 UTC" in html
+    assert "28 Jun 2026, 22:05 UTC" in html
     assert "noble" in html
     assert "amd64" in html
     assert "1.2.3 (rev 42)" in html
@@ -97,9 +114,11 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "p-notification--caution" in html
     assert "p-notification__message" in html
     assert "u-align--right" in html
-    assert "is-existing-iso" in html
+    assert "is-current-iso" in html
+    assert "is-old-iso" in html
     assert "is-missing-iso" in html
     assert "background: #f2fbf3" in html
+    assert "background: #fff8e6" in html
     assert "background: #fff2f2" in html
     assert "Records" not in html
     assert "Warnings</p>" not in html
@@ -189,6 +208,16 @@ def test_commit_and_pseudo_version_scoping():
     # Non-secboot pseudo-version keeps its custom URL and short display.
     assert ">77bc245<" in html
     assert 'https://example.com/other/77bc2457cc76' in html
+
+
+def test_published_at_without_timezone_renders_unknown():
+    payload = sample_payload()
+    payload["records"][0]["published_at"] = "2026-06-29T10:15:00"
+
+    html = render_dashboard(payload)
+
+    assert "2026-06-29T10:15:00" not in html
+    assert "Published:</strong> unknown" in html
 
 
 def test_write_site_writes_index_css_and_json_copy(tmp_path):

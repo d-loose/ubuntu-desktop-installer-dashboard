@@ -5,7 +5,7 @@ from typing import Literal
 
 from iso_dashboard.config import ARCHITECTURES, RELEASES
 
-IsoSource = Literal["pending", "missing"]
+IsoSource = Literal["current", "old", "missing"]
 
 
 @dataclass(frozen=True)

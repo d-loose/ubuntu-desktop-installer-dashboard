@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import re
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
@@ -79,12 +80,32 @@ def _warnings(values: list[str]) -> str:
 
 def _status(value: object) -> str:
     status = escape(str(value or "missing"))
-    chip_class = "p-chip--positive" if status == "pending" else "p-chip--negative"
+    chip_class = {
+        "current": "p-chip--positive",
+        "old": "p-chip--caution",
+        "missing": "p-chip--negative",
+    }.get(status, "p-chip--negative")
     return f'<span class="{chip_class}">{status}</span>'
 
 
 def _card_status_class(status: str) -> str:
-    return "is-missing-iso" if status == "missing" else "is-existing-iso"
+    return {
+        "current": "is-current-iso",
+        "old": "is-old-iso",
+        "missing": "is-missing-iso",
+    }.get(status, "is-missing-iso")
+
+
+def _published_at(value: object) -> str:
+    if not value:
+        return "unknown"
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return "unknown"
+    if parsed.tzinfo is None:
+        return "unknown"
+    return escape(parsed.astimezone(timezone.utc).strftime("%-d %b %Y, %H:%M UTC"))
 
 
 def _detail(label: str, value: str) -> str:
@@ -127,7 +148,7 @@ def render_dashboard(payload: dict[str, object]) -> str:
                 <h3>{escape(release)}</h3>
                 <p class="u-align--right">{_status(status)}</p>
               </div>
-              <p><strong>Published:</strong> {escape(str(record.get("published_at") or "unknown"))}</p>
+              <p><strong>Published:</strong> {_published_at(record.get("published_at"))}</p>
               <dl>{details}</dl>
               <details>
                 <summary>{warning_count} warnings</summary>
@@ -169,7 +190,8 @@ def render_dashboard(payload: dict[str, object]) -> str:
   <title>Ubuntu Desktop ISO Dashboard</title>
   <link rel="stylesheet" href="{VANILLA_CSS}">
   <style>
-    .is-existing-iso {{ background: #f2fbf3; border-top: 4px solid #0e8420; }}
+    .is-current-iso {{ background: #f2fbf3; border-top: 4px solid #0e8420; }}
+    .is-old-iso {{ background: #fff8e6; border-top: 4px solid #f99b11; }}
     .is-missing-iso {{ background: #fff2f2; border-top: 4px solid #c7162b; }}
   </style>
 </head>
