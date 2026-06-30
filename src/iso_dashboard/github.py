@@ -112,13 +112,16 @@ class GithubResolver:
             subiquity = self._subiquity_from_tree(upstream_sha)
             if subiquity:
                 return subiquity, ()
+            return None, (
+                f"Cannot find subiquity submodule in ubuntu-desktop-provision tree {source_sha} or ubuntu-bootstrap source commit {upstream_sha}",
+            )
 
         return None, (f"Cannot find subiquity submodule in ubuntu-desktop-provision tree {source_sha}",)
 
     def _subiquity_from_tree(self, source_sha: str) -> SourceRef | None:
         try:
             tree = json.loads(
-                self._get(f"https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/{source_sha}")
+                self._get(f"https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/{source_sha}?recursive=1")
             )
         except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             LOGGER.warning(

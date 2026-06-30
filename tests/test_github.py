@@ -37,7 +37,7 @@ def test_resolve_subiquity_reads_submodule_gitlink_from_matching_tag():
         "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/ref/tags/1.2.3": json.dumps(
             {"object": {"sha": "provision-sha"}}
         ),
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/provision-sha": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/provision-sha?recursive=1": json.dumps(
             {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
@@ -54,7 +54,7 @@ def test_resolve_subiquity_reads_submodule_gitlink_from_matching_tag():
 
 def test_resolve_subiquity_uses_bootstrap_version_hash_suffix_as_source_ref():
     responses = {
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1": json.dumps(
             {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
@@ -71,7 +71,7 @@ def test_resolve_subiquity_uses_bootstrap_version_hash_suffix_as_source_ref():
 
 def test_resolve_subiquity_reads_source_commit_from_snap_branch_snapcraft_yaml():
     responses = {
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1": json.dumps(
             {"tree": [{"path": "snap", "type": "tree", "sha": "snap-tree-sha"}]}
         ),
         "https://raw.githubusercontent.com/canonical/ubuntu-desktop-provision/b4490bc9b/snap/snapcraft.yaml": """
@@ -81,7 +81,7 @@ parts:
     source-commit: &commit-ref 7c278ba1b1353b2798caa96d1a536063841d5176
     source-type: git
 """,
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/7c278ba1b1353b2798caa96d1a536063841d5176": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/7c278ba1b1353b2798caa96d1a536063841d5176?recursive=1": json.dumps(
             {"tree": [{"path": "packages/subiquity_client/subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
@@ -96,6 +96,32 @@ parts:
     assert source.ref == "subiquity-sha"
 
 
+def test_resolve_subiquity_reports_snap_and_source_refs_when_submodule_missing():
+    responses = {
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1": json.dumps(
+            {"tree": [{"path": "snap", "type": "tree", "sha": "snap-tree-sha"}]}
+        ),
+        "https://raw.githubusercontent.com/canonical/ubuntu-desktop-provision/b4490bc9b/snap/snapcraft.yaml": """
+parts:
+  ubuntu-bootstrap:
+    source-commit: 7c278ba1b1353b2798caa96d1a536063841d5176
+""",
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/7c278ba1b1353b2798caa96d1a536063841d5176?recursive=1": json.dumps(
+            {"tree": [{"path": "packages/subiquity_client/lib", "type": "tree", "sha": "tree-sha"}]}
+        ),
+    }
+    resolver = GithubResolver(lambda url: responses[url])
+
+    source, warnings = resolver.resolve_subiquity(
+        PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628")
+    )
+
+    assert source is None
+    assert warnings == (
+        "Cannot find subiquity submodule in ubuntu-desktop-provision tree b4490bc9b or ubuntu-bootstrap source commit 7c278ba1b1353b2798caa96d1a536063841d5176",
+    )
+
+
 def test_resolve_subiquity_dereferences_plain_bootstrap_annotated_tag():
     responses = {
         "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/ref/tags/26.04": json.dumps(
@@ -104,7 +130,7 @@ def test_resolve_subiquity_dereferences_plain_bootstrap_annotated_tag():
         "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/tags/tag-sha": json.dumps(
             {"object": {"sha": "commit-sha", "type": "commit"}}
         ),
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/commit-sha": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/commit-sha?recursive=1": json.dumps(
             {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
@@ -119,7 +145,7 @@ def test_resolve_subiquity_dereferences_plain_bootstrap_annotated_tag():
 
 def test_resolve_subiquity_logs_version_resolution(caplog):
     responses = {
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1": json.dumps(
             {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
@@ -135,7 +161,7 @@ def test_resolve_subiquity_logs_version_resolution(caplog):
 def test_resolver_caches_github_fetches_for_repeated_refs():
     calls = []
     responses = {
-        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b": json.dumps(
+        "https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1": json.dumps(
             {"tree": [{"path": "subiquity", "type": "commit", "sha": "subiquity-sha"}]}
         ),
     }
@@ -149,7 +175,7 @@ def test_resolver_caches_github_fetches_for_repeated_refs():
     resolver.resolve_subiquity(PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "628"))
     resolver.resolve_subiquity(PackageVersion("ubuntu-desktop-bootstrap", "26.04-b4490bc9b", "629"))
 
-    assert calls == ["https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b"]
+    assert calls == ["https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1"]
 
 
 def test_resolver_stops_github_requests_after_rate_limit():
@@ -170,7 +196,7 @@ def test_resolver_stops_github_requests_after_rate_limit():
     assert first_warnings == ("Cannot read ubuntu-desktop-provision tree b4490bc9b for subiquity submodule",)
     assert second_source is None
     assert second_warnings == ("Skipping GitHub lookup for snapd version 2.75.2 because GitHub rate limit was already reached",)
-    assert calls == ["https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b"]
+    assert calls == ["https://api.github.com/repos/canonical/ubuntu-desktop-provision/git/trees/b4490bc9b?recursive=1"]
 
 
 def test_resolve_subiquity_returns_warning_when_no_bootstrap_version():
