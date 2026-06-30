@@ -163,6 +163,8 @@ def test_render_highlights_subiquity_snap_mismatch():
     assert "p-icon--error" in html
     assert "> mismatch</span>" in html
     assert "Subiquity snap does not match source" in html
+    assert "compare commits" in html
+    assert "https://github.com/canonical/subiquity/compare/64b0c70ec29dcc597a1f554486c61fcd634ce86d...deadbee" in html
     assert "p-chip--caution" in html
 
 
