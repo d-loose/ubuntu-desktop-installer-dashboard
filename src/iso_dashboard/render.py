@@ -122,8 +122,8 @@ def _subiquity_match(source: dict[str, object] | None, snap: dict[str, object] |
     if not source_ref or not snap_ref:
         return '<span class="p-chip" title="Subiquity snap/source comparison unknown" aria-label="Subiquity snap/source comparison unknown">? unknown</span>'
     if source_ref.startswith(snap_ref):
-        return '<span class="p-chip--positive" title="Subiquity snap matches source" aria-label="Subiquity snap matches source">OK match</span>'
-    return '<span class="p-chip--caution" title="Subiquity snap does not match source" aria-label="Subiquity snap does not match source">! mismatch</span>'
+        return '<span class="p-chip--positive" title="Subiquity snap matches source" aria-label="Subiquity snap matches source"><i class="p-icon--success" aria-hidden="true"></i> match</span>'
+    return '<span class="p-chip--caution" title="Subiquity snap does not match source" aria-label="Subiquity snap does not match source"><i class="p-icon--error" aria-hidden="true"></i> mismatch</span>'
 
 
 def _detail_items(items: list[tuple[str, str]]) -> str:
