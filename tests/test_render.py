@@ -34,8 +34,11 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "https://assets.ubuntu.com/v1/vanilla-framework-version-" in html
     assert "p-navigation" in html
     assert "p-strip" in html
-    assert "p-table-wrapper" in html
-    assert "p-table" in html
+    assert "data-release-filter" in html
+    assert "data-status-filter" in html
+    assert "data-iso-card" in html
+    assert "<details" in html
+    assert "function filterCards" in html
     assert "Generated: 2026-06-29T12:00:00Z" in html
     assert "noble" in html
     assert "amd64" in html
@@ -57,9 +60,8 @@ def test_escapes_malicious_html_in_warnings_and_source():
 
     html = render_dashboard(payload)
 
-    # The rendered HTML must not contain raw <script
-    assert "<script" not in html.lower()
-    # The quoted URL should be escaped; ensure the raw javascript: is not present unescaped
+    assert "Found issue &lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "bad-ref&lt;script&gt;" in html
     assert "javascript:alert(2)" not in html.lower()
 
 

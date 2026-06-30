@@ -31,7 +31,7 @@ def _source(value: dict[str, object] | None) -> str:
 
 def _warnings(values: list[str]) -> str:
     if not values:
-        return '<span class="p-chip--positive">No warnings</span>'
+        return "No warnings"
     return "".join(f'<li class="p-list__item is-ticked">{escape(value)}</li>' for value in values)
 
 
@@ -41,30 +41,67 @@ def _status(value: object) -> str:
     return f'<span class="{chip_class}">{status}</span>'
 
 
+def _detail(label: str, value: str) -> str:
+    return f"<dt>{escape(label)}</dt><dd>{value}</dd>"
+
+
 def render_dashboard(payload: dict[str, object]) -> str:
-    rows = []
+    cards_by_release: dict[str, list[str]] = {}
     records = payload.get("records", [])
     assert isinstance(records, list)
     for record in records:
         assert isinstance(record, dict)
         warnings = record.get("warnings", [])
         assert isinstance(warnings, list)
-        rows.append(
-            "<tr>"
-            f'<td>{escape(str(record.get("release", "unknown")))}</td>'
-            f'<td>{escape(str(record.get("architecture", "unknown")))}</td>'
-            f'<td>{_status(record.get("iso_source", "missing"))}<br>{escape(str(record.get("published_at") or "unknown"))}</td>'
-            f'<td>{_package(record.get("ubuntu_desktop_bootstrap"))}</td>'
-            f'<td>{_package(record.get("snapd_snap"))}</td>'
-            f'<td>{_package(record.get("snapd_deb"))}</td>'
-            f'<td>{_source(record.get("subiquity"))}</td>'
-            f'<td>{_source(record.get("secboot"))}</td>'
-            f'<td><ul class="p-list">{_warnings(warnings)}</ul></td>'
-            "</tr>"
+        release = str(record.get("release", "unknown"))
+        architecture = str(record.get("architecture", "unknown"))
+        status = str(record.get("iso_source", "missing"))
+        warning_count = len(warnings)
+        warning_content = _warnings(warnings)
+        warning_body = (
+            f'<ul class="p-list">{warning_content}</ul>'
+            if warnings
+            else '<p><span class="p-chip--positive">No warnings</span></p>'
         )
+        details = "".join(
+            [
+                _detail("ubuntu-desktop-bootstrap", _package(record.get("ubuntu_desktop_bootstrap"))),
+                _detail("snapd snap", _package(record.get("snapd_snap"))),
+                _detail("snapd deb", _package(record.get("snapd_deb"))),
+                _detail("subiquity", _source(record.get("subiquity"))),
+                _detail("secboot", _source(record.get("secboot"))),
+            ]
+        )
+        card = f"""
+          <div class="col-4" data-iso-card data-release="{escape(release, quote=True)}" data-status="{escape(status, quote=True)}">
+            <div class="p-card">
+              <h3>{escape(architecture)} {_status(status)}</h3>
+              <p><strong>Published:</strong> {escape(str(record.get("published_at") or "unknown"))}</p>
+              <dl>{details}</dl>
+              <details>
+                <summary>{warning_count} warnings</summary>
+                {warning_body}
+              </details>
+            </div>
+          </div>
+"""
+        cards_by_release.setdefault(release, []).append(card)
 
     warning_count = sum(len(record.get("warnings", [])) for record in records if isinstance(record, dict))
     generated_at = escape(str(payload.get("generated_at", "unknown")))
+    releases = payload.get("releases", [])
+    if not isinstance(releases, list):
+        releases = []
+    release_options = "".join(f'<option value="{escape(str(release), quote=True)}">{escape(str(release))}</option>' for release in releases)
+    sections = "".join(
+        f"""
+    <section class="p-strip is-shallow" data-release-section="{escape(release, quote=True)}">
+      <div class="row"><div class="col-12"><h2>{escape(release)}</h2></div></div>
+      <div class="row">{''.join(cards)}</div>
+    </section>
+"""
+        for release, cards in cards_by_release.items()
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -95,22 +132,41 @@ def render_dashboard(payload: dict[str, object]) -> str:
           <div class="p-card">
             <p class="p-heading--4">{len(records)} records, {warning_count} warnings</p>
           </div>
+          <form class="p-form p-form--inline" aria-label="Dashboard filters">
+            <div class="p-form__group">
+              <label for="release-filter">Release</label>
+              <select id="release-filter" data-release-filter>
+                <option value="">All releases</option>
+                {release_options}
+              </select>
+            </div>
+            <div class="p-form__group">
+              <label for="status-filter">Status</label>
+              <select id="status-filter" data-status-filter>
+                <option value="">All statuses</option>
+                <option value="pending">pending</option>
+                <option value="missing">missing</option>
+              </select>
+            </div>
+          </form>
         </div>
       </div>
     </section>
-    <section class="p-strip is-shallow">
-      <div class="row">
-        <div class="col-12">
-          <div class="p-table-wrapper">
-            <table class="p-table">
-              <thead><tr><th>Release</th><th>Architecture</th><th>ISO</th><th>ubuntu-desktop-bootstrap</th><th>snapd snap</th><th>snapd deb</th><th>subiquity</th><th>secboot</th><th>Warnings</th></tr></thead>
-              <tbody>{''.join(rows)}</tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
+    {sections}
   </main>
+  <script>
+    function filterCards() {{
+      const release = document.querySelector('[data-release-filter]').value;
+      const status = document.querySelector('[data-status-filter]').value;
+      document.querySelectorAll('[data-iso-card]').forEach((card) => {{
+        const releaseMatch = !release || card.dataset.release === release;
+        const statusMatch = !status || card.dataset.status === status;
+        card.hidden = !(releaseMatch && statusMatch);
+      }});
+    }}
+    document.querySelector('[data-release-filter]').addEventListener('change', filterCards);
+    document.querySelector('[data-status-filter]').addEventListener('change', filterCards);
+  </script>
 </body>
 </html>
 """
