@@ -83,6 +83,9 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert 'data-architecture="arm64"' in html
     assert 'data-architecture-section="amd64"' in html
     assert 'data-architecture-section="arm64"' in html
+    assert '<p class="p-muted-heading">Architecture</p>' not in html
+    assert "<h2>amd64</h2>" not in html
+    assert "<h2>arm64</h2>" not in html
     assert 'data-status="current"' in html
     assert 'data-status="old"' in html
     assert 'data-status="missing"' in html

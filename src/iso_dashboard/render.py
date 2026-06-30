@@ -231,12 +231,6 @@ def render_dashboard(payload: dict[str, object]) -> str:
     sections = "".join(
         f"""
     <section class="p-strip is-shallow" data-architecture-section="{escape(architecture, quote=True)}">
-      <div class="row">
-        <div class="col-12">
-          <p class="p-muted-heading">Architecture</p>
-          <h2>{escape(architecture)}</h2>
-        </div>
-      </div>
       <div class="row">{''.join(cards)}</div>
     </section>
 """
