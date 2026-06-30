@@ -16,6 +16,20 @@ def test_parse_cdimage_listing_extracts_artifacts_and_modified_times():
     assert artifacts[1].modified == "2026-06-29T10:16:00Z"
 
 
+def test_parse_cdimage_listing_extracts_modified_times_from_table_cells():
+    html = """
+<tr><td><a href="resolute-desktop-amd64.iso">resolute-desktop-amd64.iso</a></td><td align="right">2026-06-25 08:31  </td><td align="right">6.1G</td></tr>
+<tr><td><a href="resolute-desktop-amd64.manifest">resolute-desktop-amd64.manifest</a></td><td align="right">2026-06-25 08:31  </td><td align="right"> 58K</td></tr>
+"""
+
+    artifacts = parse_cdimage_listing(html)
+
+    assert artifacts[0].name == "resolute-desktop-amd64.iso"
+    assert artifacts[0].modified == "2026-06-25T08:31:00Z"
+    assert artifacts[1].name == "resolute-desktop-amd64.manifest"
+    assert artifacts[1].modified == "2026-06-25T08:31:00Z"
+
+
 def test_find_artifact_matches_release_architecture_and_suffix():
     artifacts = parse_cdimage_listing((FIXTURES / "cdimage_pending.html").read_text())
 

@@ -41,7 +41,10 @@ class _LinkParser(HTMLParser):
 
 
 def _modified_for_link(html_text: str, link_text: str) -> str | None:
-    pattern = re.compile(re.escape(link_text) + r"</a>\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})")
+    pattern = re.compile(
+        re.escape(link_text) + r"</a>(?:\s|</?td[^>]*>)*?(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})",
+        re.IGNORECASE,
+    )
     match = pattern.search(html_text)
     if not match:
         return None
