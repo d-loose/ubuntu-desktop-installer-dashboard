@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import json
 import shutil
+import re
 from html import escape
 from pathlib import Path
+from urllib.parse import urlparse
 
 VANILLA_CSS = "https://assets.ubuntu.com/v1/vanilla-framework-version-1.8.0.min.css"
+
+# Accept commit refs between 7 and 40 hex chars. Short 7-char refs are valid
+# abbreviated commit identifiers used throughout the renderer and tests.
+COMMIT_RE = re.compile(r"^[0-9a-f]{7,40}$", re.IGNORECASE)
+SECBOOT_PSEUDO_VERSION_RE = re.compile(r"^v0\.0\.0-\d{14}-([0-9a-f]{12,40})$", re.IGNORECASE)
 
 
 def _package(value: dict[str, object] | None) -> str:
@@ -19,20 +26,55 @@ def _package(value: dict[str, object] | None) -> str:
 def _source(value: dict[str, object] | None) -> str:
     if not value or not value.get("ref"):
         return "unknown"
-    ref = escape(str(value["ref"]))
+    raw_ref = str(value["ref"])
+    display_ref = raw_ref
     url = value.get("url")
-    if url:
-        raw = str(url).strip()
-        if raw.lower().startswith("javascript:"):
+    raw_url = str(url).strip() if url else ""
+    pseudo_version = SECBOOT_PSEUDO_VERSION_RE.fullmatch(raw_ref)
+    if pseudo_version:
+        commit = pseudo_version.group(1)
+        display_ref = commit[:7]
+        # If this value specifically refers to secboot (value.get("name")=="secboot"),
+        # rewrite the URL to point to the canonical secboot commit page. For other
+        # packages that happen to have a pseudo-version-shaped ref, we do NOT
+        # rewrite the URL to snapcore/secboot; we only present the shortened
+        # 7-character display ref.
+        if value.get("name") == "secboot":
+            raw_url = f"https://github.com/snapcore/secboot/commit/{commit}"
+    elif COMMIT_RE.fullmatch(raw_ref):
+        display_ref = raw_ref[:7]
+
+    ref = escape(display_ref)
+    title = f' title="{escape(raw_ref, quote=True)}"' if display_ref != raw_ref else ""
+    if raw_url:
+        # Only allow explicit http(s) URLs. Reject other schemes such as
+        # javascript:, data:, vbscript:, file:, etc. When the scheme is not
+        # safe, render only the escaped ref text (no href and no URL text).
+        parsed = urlparse(raw_url)
+        scheme = (parsed.scheme or "").lower()
+        # Require a safe http(s) scheme and a non-empty netloc so malformed
+        # URLs like "http:/nohost" (which parse with an empty netloc) are not
+        # rendered as links. If the URL is unsafe or missing a host, render
+        # only the escaped ref text.
+        if scheme not in ("http", "https") or not parsed.netloc:
             return ref
-        return f'<a href="{escape(raw, quote=True)}">{ref}</a>'
+        return f'<a href="{escape(raw_url, quote=True)}"{title}>{ref}</a>'
     return ref
 
 
 def _warnings(values: list[str]) -> str:
     if not values:
         return "No warnings"
-    return "".join(f'<li class="p-list__item is-ticked">{escape(value)}</li>' for value in values)
+    return "".join(
+        """
+        <div class="p-notification--caution is-borderless">
+          <div class="p-notification__content">
+            <p class="p-notification__message">{message}</p>
+          </div>
+        </div>
+""".format(message=escape(value))
+        for value in values
+    )
 
 
 def _status(value: object) -> str:
@@ -41,8 +83,17 @@ def _status(value: object) -> str:
     return f'<span class="{chip_class}">{status}</span>'
 
 
+def _card_status_class(status: str) -> str:
+    return "is-missing-iso" if status == "missing" else "is-existing-iso"
+
+
 def _detail(label: str, value: str) -> str:
-    return f"<dt>{escape(label)}</dt><dd>{value}</dd>"
+    # NOTE: _detail() accepts `value` as an HTML fragment and does NOT escape
+    # it. Callers must ensure `value` is safe (already escaped or intentionally
+    # formatted). In this renderer `_package()` and `_source()` produce the
+    # HTML fragments passed as `value` (they perform any required escaping);
+    # escaping `value` here would break intended links/formatting.
+    return f'<dt class="p-muted-heading">{escape(label)}</dt><dd>{value}</dd>'
 
 
 def render_dashboard(payload: dict[str, object]) -> str:
@@ -56,13 +107,10 @@ def render_dashboard(payload: dict[str, object]) -> str:
         release = str(record.get("release", "unknown"))
         architecture = str(record.get("architecture", "unknown"))
         status = str(record.get("iso_source", "missing"))
+        card_status_class = _card_status_class(status)
         warning_count = len(warnings)
         warning_content = _warnings(warnings)
-        warning_body = (
-            f'<ul class="p-list">{warning_content}</ul>'
-            if warnings
-            else '<p><span class="p-chip--positive">No warnings</span></p>'
-        )
+        warning_body = warning_content if warnings else '<p><span class="p-chip--positive">No warnings</span></p>'
         details = "".join(
             [
                 _detail("ubuntu-desktop-bootstrap", _package(record.get("ubuntu_desktop_bootstrap"))),
@@ -74,8 +122,11 @@ def render_dashboard(payload: dict[str, object]) -> str:
         )
         card = f"""
           <div class="col-4" data-iso-card data-release="{escape(release, quote=True)}" data-status="{escape(status, quote=True)}">
-            <div class="p-card">
-              <h3>{escape(architecture)} {_status(status)}</h3>
+            <div class="p-card--highlighted {card_status_class}">
+              <div class="u-clearfix">
+                <h3>{escape(architecture)}</h3>
+                <p class="u-align--right">{_status(status)}</p>
+              </div>
               <p><strong>Published:</strong> {escape(str(record.get("published_at") or "unknown"))}</p>
               <dl>{details}</dl>
               <details>
@@ -87,16 +138,23 @@ def render_dashboard(payload: dict[str, object]) -> str:
 """
         cards_by_release.setdefault(release, []).append(card)
 
-    warning_count = sum(len(record.get("warnings", [])) for record in records if isinstance(record, dict))
     generated_at = escape(str(payload.get("generated_at", "unknown")))
     releases = payload.get("releases", [])
     if not isinstance(releases, list):
         releases = []
-    release_options = "".join(f'<option value="{escape(str(release), quote=True)}">{escape(str(release))}</option>' for release in releases)
+    release_options = "".join(
+        f"<option value=\"{escape(str(release), quote=True)}\">{escape(str(release))}</option>"
+        for release in releases
+    )
     sections = "".join(
         f"""
     <section class="p-strip is-shallow" data-release-section="{escape(release, quote=True)}">
-      <div class="row"><div class="col-12"><h2>{escape(release)}</h2></div></div>
+      <div class="row">
+        <div class="col-12">
+          <p class="p-muted-heading">Release</p>
+          <h2>{escape(release)}</h2>
+        </div>
+      </div>
       <div class="row">{''.join(cards)}</div>
     </section>
 """
@@ -109,29 +167,24 @@ def render_dashboard(payload: dict[str, object]) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ubuntu Desktop ISO Dashboard</title>
   <link rel="stylesheet" href="{VANILLA_CSS}">
+  <style>
+    .is-existing-iso {{ background: #f2fbf3; border-top: 4px solid #0e8420; }}
+    .is-missing-iso {{ background: #fff2f2; border-top: 4px solid #c7162b; }}
+  </style>
 </head>
 <body>
-  <header class="p-navigation">
-    <div class="p-navigation__row">
-      <div class="p-navigation__banner">
-        <div class="p-navigation__tagged-logo">
-          <a class="p-navigation__link" href="#">
-            <div class="p-navigation__logo-tag"><img class="p-navigation__logo-icon" src="https://assets.ubuntu.com/v1/82818827-CoF_white.svg" alt=""></div>
-            <span class="p-navigation__logo-title">Ubuntu Desktop ISO Dashboard</span>
-          </a>
+  <main>
+    <section class="p-strip--suru is-dark">
+      <div class="row">
+        <div class="col-8">
+          <h1>Ubuntu Desktop ISO Dashboard</h1>
+          <p>Generated: {generated_at}</p>
         </div>
       </div>
-    </div>
-  </header>
-  <main>
+    </section>
     <section class="p-strip is-shallow">
       <div class="row">
         <div class="col-12">
-          <h1>Ubuntu Desktop ISO Dashboard</h1>
-          <p>Generated: {generated_at}</p>
-          <div class="p-card">
-            <p class="p-heading--4">{len(records)} records, {warning_count} warnings</p>
-          </div>
           <form class="p-form p-form--inline" aria-label="Dashboard filters">
             <div class="p-form__group">
               <label for="release-filter">Release</label>
