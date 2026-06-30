@@ -71,3 +71,41 @@ class SnapcraftResolver:
                     return PackageVersion(snap.name, version, snap.revision, snap.channel), ()
 
         return snap, (f"Cannot resolve {snap.name} snap revision {snap.revision} via Snapcraft: response did not include snap",)
+
+    def resolve_channel(self, name: str, channel: str | None, architecture: str) -> tuple[PackageVersion | None, tuple[str, ...]]:
+        if not channel:
+            return None, (f"Cannot resolve {name} snap channel because channel is missing",)
+
+        headers = {
+            "Snap-Device-Series": "16",
+            "Snap-Device-Architecture": SNAPCRAFT_ARCHITECTURES.get(architecture, architecture),
+            "Content-Type": "application/json",
+        }
+        LOGGER.info("Resolving %s channel %s for %s via Snapcraft", name, channel, architecture)
+        payload: dict[str, object] = {
+            "context": [],
+            "actions": [
+                {
+                    "action": "install",
+                    "instance-key": "preview",
+                    "name": name,
+                    "channel": channel,
+                }
+            ],
+        }
+
+        try:
+            response = json.loads(self._post_json(SNAPCRAFT_REFRESH_URL, headers, payload))
+        except (json.JSONDecodeError, RuntimeError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+            return None, (f"Cannot resolve {name} snap channel {channel} via Snapcraft: {exc}",)
+
+        for result in response.get("results", []):
+            resolved = result.get("snap", {})
+            if resolved.get("name") == name:
+                version = resolved.get("version")
+                revision = resolved.get("revision")
+                if isinstance(version, str) and version and revision is not None:
+                    LOGGER.info("Resolved %s channel %s to version %s revision %s", name, channel, version, revision)
+                    return PackageVersion(name, version, str(revision), channel), ()
+
+        return None, (f"Cannot resolve {name} snap channel {channel} via Snapcraft: response did not include snap",)

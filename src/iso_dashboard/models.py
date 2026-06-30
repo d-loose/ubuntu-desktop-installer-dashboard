@@ -27,6 +27,7 @@ class IsoRecord:
     manifest_url: str | None
     published_at: str | None
     ubuntu_desktop_bootstrap: PackageVersion | None
+    subiquity_snap: PackageVersion | None
     snapd_snap: PackageVersion | None
     snapd_deb: PackageVersion | None
     subiquity: SourceRef | None

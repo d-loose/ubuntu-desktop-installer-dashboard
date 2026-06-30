@@ -109,6 +109,23 @@ def _published_at(value: object) -> str:
     return escape(parsed.strftime("%-d %b %Y, %H:%M UTC"))
 
 
+def _version_hash(value: dict[str, object] | None) -> str | None:
+    if not value or not value.get("version"):
+        return None
+    match = re.search(r"-([0-9a-f]{7,40})$", str(value["version"]))
+    return match.group(1) if match else None
+
+
+def _subiquity_match(source: dict[str, object] | None, snap: dict[str, object] | None) -> str:
+    source_ref = str(source.get("ref")) if source and source.get("ref") else ""
+    snap_ref = _version_hash(snap)
+    if not source_ref or not snap_ref:
+        return '<span class="p-chip">subiquity unknown</span>'
+    if source_ref.startswith(snap_ref):
+        return '<span class="p-chip--positive">subiquity match</span>'
+    return '<span class="p-chip--caution">subiquity mismatch</span>'
+
+
 def _parse_utc(value: object) -> datetime | None:
     if not value:
         return None
@@ -162,7 +179,9 @@ def render_dashboard(payload: dict[str, object]) -> str:
                 _detail("ubuntu-desktop-bootstrap", _package(record.get("ubuntu_desktop_bootstrap"))),
                 _detail("snapd snap", _package(record.get("snapd_snap"))),
                 _detail("snapd deb", _package(record.get("snapd_deb"))),
-                _detail("subiquity", _source(record.get("subiquity"))),
+                _detail("subiquity snap", _package(record.get("subiquity_snap"))),
+                _detail("subiquity source", _source(record.get("subiquity"))),
+                _detail("subiquity check", _subiquity_match(record.get("subiquity"), record.get("subiquity_snap"))),
                 _detail("secboot", _source(record.get("secboot"))),
             ]
         )

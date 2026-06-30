@@ -41,7 +41,7 @@ class Collector:
         try:
             listing = self._http_get(base_url)
         except Exception as exc:
-            return IsoRecord(release, architecture, None, None, None, None, None, None, None, None, (f"Cannot fetch pending listing for {release}: {exc}",))
+            return IsoRecord(release, architecture, None, None, None, None, None, None, None, None, None, (f"Cannot fetch pending listing for {release}: {exc}",))
 
         artifacts = parse_cdimage_listing(listing)
         iso = find_artifact(artifacts, release, architecture, ".iso")
@@ -76,6 +76,10 @@ class Collector:
             LOGGER.info("Resolving %s snap revision %s for %s", bootstrap.name, bootstrap.revision, architecture)
             bootstrap, bootstrap_warnings = self._snapcraft_resolver.resolve_revision(bootstrap, architecture)
             warnings.extend(bootstrap_warnings)
+        subiquity_snap = None
+        if bootstrap is not None:
+            subiquity_snap, subiquity_snap_warnings = self._snapcraft_resolver.resolve_channel("subiquity", bootstrap.channel, architecture)
+            warnings.extend(subiquity_snap_warnings)
         if snapd_snap is not None:
             LOGGER.info("Resolving %s snap revision %s for %s", snapd_snap.name, snapd_snap.revision, architecture)
             snapd_snap, snapd_warnings = self._snapcraft_resolver.resolve_revision(snapd_snap, architecture)
@@ -93,6 +97,7 @@ class Collector:
             manifest_url=manifest_url,
             published_at=iso.modified if iso else None,
             ubuntu_desktop_bootstrap=bootstrap,
+            subiquity_snap=subiquity_snap,
             snapd_snap=snapd_snap,
             snapd_deb=snapd_deb,
             subiquity=subiquity,
