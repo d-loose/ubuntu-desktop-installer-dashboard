@@ -1,4 +1,4 @@
-CDIMAGE_BASE_URL = "https://cdimage.ubuntu.com"
+CDIMAGE_BASE_URL = "https://cdimage.ubuntu.com/ubuntu"
 RELEASES = ("noble", "resolute", "stonking")
 ARCHITECTURES = ("amd64", "arm64", "riscv")
 
