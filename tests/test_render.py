@@ -101,9 +101,13 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "subiquity snap" not in html
     assert "subiquity source" not in html
     assert "subiquity check" not in html
-    assert "snap: 2.70 (channel stable, rev 24718)<br>deb: 2.70+ubuntu1" in html
-    assert "snap: 26.04+git18.64b0c70 (channel 26.04/stable/ubuntu-26.04.1, rev 1234)<br>source:" in html
-    assert "subiquity match" in html
+    assert "dashboard-detail-list" in html
+    assert '<dt>snap</dt><dd>2.70 (channel stable, rev 24718)</dd>' in html
+    assert '<dt>deb</dt><dd>2.70+ubuntu1</dd>' in html
+    assert '<dt>snap</dt><dd>26.04+git18.64b0c70 (channel 26.04/stable/ubuntu-26.04.1, rev 1234)</dd>' in html
+    assert '<dt>source</dt><dd><a href="https://github.com/canonical/subiquity/commit/64b0c70ec29dcc597a1f554486c61fcd634ce86d" title="64b0c70ec29dcc597a1f554486c61fcd634ce86d">64b0c70</a></dd>' in html
+    assert "OK match" in html
+    assert "Subiquity snap matches source" in html
     assert "2.70 (channel stable, rev 24718)" in html
     assert "2.70+ubuntu1" in html
     assert ">64b0c70<" in html
@@ -152,7 +156,8 @@ def test_render_highlights_subiquity_snap_mismatch():
 
     html = render_dashboard(payload)
 
-    assert "subiquity mismatch" in html
+    assert "! mismatch" in html
+    assert "Subiquity snap does not match source" in html
     assert "p-chip--caution" in html
 
 

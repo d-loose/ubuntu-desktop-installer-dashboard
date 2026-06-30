@@ -120,18 +120,30 @@ def _subiquity_match(source: dict[str, object] | None, snap: dict[str, object] |
     source_ref = str(source.get("ref")) if source and source.get("ref") else ""
     snap_ref = _version_hash(snap)
     if not source_ref or not snap_ref:
-        return '<span class="p-chip">subiquity unknown</span>'
+        return '<span class="p-chip" title="Subiquity snap/source comparison unknown" aria-label="Subiquity snap/source comparison unknown">? unknown</span>'
     if source_ref.startswith(snap_ref):
-        return '<span class="p-chip--positive">subiquity match</span>'
-    return '<span class="p-chip--caution">subiquity mismatch</span>'
+        return '<span class="p-chip--positive" title="Subiquity snap matches source" aria-label="Subiquity snap matches source">OK match</span>'
+    return '<span class="p-chip--caution" title="Subiquity snap does not match source" aria-label="Subiquity snap does not match source">! mismatch</span>'
+
+
+def _detail_items(items: list[tuple[str, str]]) -> str:
+    body = "".join(
+        f'<div class="dashboard-detail-list__item"><dt>{escape(label)}</dt><dd>{value}</dd></div>'
+        for label, value in items
+    )
+    return f'<dl class="dashboard-detail-list">{body}</dl>'
 
 
 def _snapd_details(snap: dict[str, object] | None, deb: dict[str, object] | None) -> str:
-    return f"snap: {_package(snap)}<br>deb: {_package(deb)}"
+    return _detail_items([("snap", _package(snap)), ("deb", _package(deb))])
 
 
 def _subiquity_details(source: dict[str, object] | None, snap: dict[str, object] | None) -> str:
-    return f"snap: {_package(snap)}<br>source: {_source(source)}<br>{_subiquity_match(source, snap)}"
+    return _detail_items([
+        ("snap", _package(snap)),
+        ("source", _source(source)),
+        ("status", _subiquity_match(source, snap)),
+    ])
 
 
 def _parse_utc(value: object) -> datetime | None:
@@ -241,6 +253,10 @@ def render_dashboard(payload: dict[str, object]) -> str:
     .is-current-iso {{ background: #f2fbf3; border-top: 4px solid #0e8420; }}
     .is-old-iso {{ background: #fff8e6; border-top: 4px solid #f99b11; }}
     .is-missing-iso {{ background: #fff2f2; border-top: 4px solid #c7162b; }}
+    .dashboard-detail-list {{ margin: 0; }}
+    .dashboard-detail-list__item {{ display: grid; grid-template-columns: 4.5rem 1fr; gap: .5rem; margin-bottom: .25rem; }}
+    .dashboard-detail-list__item dt {{ color: #666; font-size: .875rem; font-weight: 400; margin: 0; }}
+    .dashboard-detail-list__item dd {{ margin: 0; }}
   </style>
 </head>
 <body>
