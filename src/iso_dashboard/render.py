@@ -112,7 +112,7 @@ def _published_at(value: object) -> str:
 def _version_hash(value: dict[str, object] | None) -> str | None:
     if not value or not value.get("version"):
         return None
-    match = re.search(r"-([0-9a-f]{7,40})$", str(value["version"]))
+    match = re.search(r"(?:-|\+git\d+\.)([0-9a-f]{7,40})$", str(value["version"]))
     return match.group(1) if match else None
 
 

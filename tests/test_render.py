@@ -16,7 +16,7 @@ def sample_payload():
                 "manifest_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest",
                 "published_at": "2026-06-29T10:15:00Z",
                 "ubuntu_desktop_bootstrap": {"name": "ubuntu-desktop-bootstrap", "version": "1.2.3", "revision": "42", "channel": "26.04/stable/ubuntu-26.04.1"},
-                "subiquity_snap": {"name": "subiquity", "version": "26.04-64b0c70", "revision": "1234", "channel": "26.04/stable/ubuntu-26.04.1"},
+                "subiquity_snap": {"name": "subiquity", "version": "26.04+git18.64b0c70", "revision": "1234", "channel": "26.04/stable/ubuntu-26.04.1"},
                 "snapd_snap": {"name": "snapd", "version": "2.70", "revision": "24718", "channel": "stable"},
                 "snapd_deb": {"name": "snapd", "version": "2.70+ubuntu1", "revision": None, "channel": None},
                 "subiquity": {
@@ -143,7 +143,7 @@ def test_escapes_malicious_html_in_warnings_and_source():
 
 def test_render_highlights_subiquity_snap_mismatch():
     payload = sample_payload()
-    payload["records"][0]["subiquity_snap"]["version"] = "26.04-deadbee"
+    payload["records"][0]["subiquity_snap"]["version"] = "26.04+git18.deadbee"
 
     html = render_dashboard(payload)
 

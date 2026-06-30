@@ -76,7 +76,7 @@ def test_resolve_channel_uses_snapcraft_refresh_api_request():
 
     resolver = SnapcraftResolver(post_json)
 
-    resolved, warnings = resolver.resolve_channel("subiquity", "26.04/stable/ubuntu-26.04.1", "amd64")
+    resolved, warnings = resolver.resolve_channel("subiquity", "26.04/stable/ubuntu-26.04.1", "riscv")
 
     assert warnings == ()
     assert resolved == PackageVersion("subiquity", "26.04-3b3d4a4cc", "1234", "26.04/stable/ubuntu-26.04.1")
@@ -85,7 +85,7 @@ def test_resolve_channel_uses_snapcraft_refresh_api_request():
             "https://api.snapcraft.io/v2/snaps/refresh",
             {
                 "Snap-Device-Series": "16",
-                "Snap-Device-Architecture": "amd64",
+                "Snap-Device-Architecture": "riscv64",
                 "Content-Type": "application/json",
             },
             {
