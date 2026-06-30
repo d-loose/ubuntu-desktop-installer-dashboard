@@ -91,7 +91,7 @@ def _status(value: object) -> str:
         "old": "p-chip--caution",
         "missing": "p-chip--negative",
     }.get(status, "p-chip--negative")
-    return f'<span class="{chip_class}">{status}</span>'
+    return f'<span class="p-chip is-read-only is-inline is-dense {chip_class}">{status}</span>'
 
 
 def _card_status_class(status: str) -> str:
@@ -120,10 +120,10 @@ def _subiquity_match(source: dict[str, object] | None, snap: dict[str, object] |
     source_ref = str(source.get("ref")) if source and source.get("ref") else ""
     snap_ref = _version_hash(snap)
     if not source_ref or not snap_ref:
-        return '<span class="p-chip" title="Subiquity snap/source comparison unknown" aria-label="Subiquity snap/source comparison unknown">? unknown</span>'
+        return '<span class="p-chip is-read-only is-inline is-dense" title="Subiquity snap/source comparison unknown" aria-label="Subiquity snap/source comparison unknown">? unknown</span>'
     if source_ref.startswith(snap_ref):
-        return '<span class="p-chip--positive" title="Subiquity snap matches source" aria-label="Subiquity snap matches source">OK match</span>'
-    return '<span class="p-chip--caution" title="Subiquity snap does not match source" aria-label="Subiquity snap does not match source">! mismatch</span>'
+        return '<span class="p-chip is-read-only is-inline is-dense p-chip--positive" title="Subiquity snap matches source" aria-label="Subiquity snap matches source">OK match</span>'
+    return '<span class="p-chip is-read-only is-inline is-dense p-chip--caution" title="Subiquity snap does not match source" aria-label="Subiquity snap does not match source">! mismatch</span>'
 
 
 def _detail_items(items: list[tuple[str, str]]) -> str:
@@ -193,7 +193,7 @@ def render_dashboard(payload: dict[str, object]) -> str:
         card_status_class = _card_status_class(status)
         warning_count = len(warnings)
         warning_content = _warnings(warnings)
-        warning_body = warning_content if warnings else '<p><span class="p-chip--positive">No warnings</span></p>'
+        warning_body = warning_content if warnings else '<p><span class="p-chip is-read-only is-inline is-dense p-chip--positive">No warnings</span></p>'
         details = "".join(
             [
                 _detail("ubuntu-desktop-bootstrap", _package(record.get("ubuntu_desktop_bootstrap"))),

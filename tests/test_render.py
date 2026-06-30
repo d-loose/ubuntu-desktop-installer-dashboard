@@ -123,6 +123,8 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "p-muted-heading" in html
     assert "p-notification--caution" in html
     assert "p-notification__message" in html
+    assert "p-chip is-read-only is-inline is-dense p-chip--positive" in html
+    assert "p-chip is-read-only is-inline is-dense p-chip--negative" in html
     assert "u-align--right" in html
     assert "is-current-iso" in html
     assert "is-old-iso" in html
@@ -158,7 +160,7 @@ def test_render_highlights_subiquity_snap_mismatch():
 
     assert "! mismatch" in html
     assert "Subiquity snap does not match source" in html
-    assert "p-chip--caution" in html
+    assert "p-chip is-read-only is-inline is-dense p-chip--caution" in html
 
 
 def test_render_ignores_legacy_iso_source_field():
