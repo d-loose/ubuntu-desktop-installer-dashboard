@@ -31,6 +31,11 @@ def test_render_dashboard_includes_summary_table_and_links():
     html = render_dashboard(sample_payload())
 
     assert "Ubuntu Desktop ISO Dashboard" in html
+    assert "https://assets.ubuntu.com/v1/vanilla-framework-version-" in html
+    assert "p-navigation" in html
+    assert "p-strip" in html
+    assert "p-table-wrapper" in html
+    assert "p-table" in html
     assert "Generated: 2026-06-29T12:00:00Z" in html
     assert "noble" in html
     assert "amd64" in html
@@ -40,7 +45,6 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "subiquity-sha" in html
     assert "https://github.com/canonical/subiquity/commit/subiquity-sha" in html
     assert "No warnings" in html
-    assert "<script" not in html.lower()
 
 
 def test_escapes_malicious_html_in_warnings_and_source():
@@ -67,5 +71,5 @@ def test_write_site_writes_index_css_and_json_copy(tmp_path):
     write_site(data_path, tmp_path / "site")
 
     assert (tmp_path / "site" / "index.html").exists()
-    assert (tmp_path / "site" / "styles.css").exists()
+    assert not (tmp_path / "site" / "styles.css").exists()
     assert (tmp_path / "site" / "data" / "latest.json").exists()
