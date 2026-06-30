@@ -11,6 +11,7 @@ from iso_dashboard.models import PackageVersion, SourceRef
 
 HttpClient = Callable[[str], str]
 LOGGER = logging.getLogger(__name__)
+SECBOOT_PSEUDO_VERSION_RE = re.compile(r"^v0\.0\.0-\d{14}-([0-9a-f]{12,40})$", re.IGNORECASE)
 
 
 def http_get_text(url: str) -> str:
@@ -83,6 +84,11 @@ class GithubResolver:
         if match:
             return match.group(1)
         return self._tag_sha("canonical", "ubuntu-desktop-provision", version)
+
+    def _secboot_source_ref(self, version: str) -> SourceRef:
+        match = SECBOOT_PSEUDO_VERSION_RE.fullmatch(version)
+        ref = match.group(1) if match else version
+        return SourceRef("secboot", ref, f"https://github.com/snapcore/secboot/commit/{ref}")
 
     def resolve_subiquity(self, bootstrap: PackageVersion | None) -> tuple[SourceRef | None, tuple[str, ...]]:
         if bootstrap is None or bootstrap.version is None:
@@ -185,4 +191,4 @@ class GithubResolver:
             return None, (f"Cannot find github.com/snapcore/secboot in snapd go.mod at source ref {source_sha}",)
 
         ref = match.group(1)
-        return SourceRef("secboot", ref, f"https://github.com/snapcore/secboot/tree/{ref}"), ()
+        return self._secboot_source_ref(ref), ()

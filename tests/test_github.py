@@ -220,8 +220,8 @@ def test_resolve_secboot_reads_go_mod_from_matching_snapd_tag():
     assert warnings == ()
     assert source is not None
     assert source.name == "secboot"
-    assert source.ref == "v0.0.0-20260629000000-abcdef123456"
-    assert source.url == "https://github.com/snapcore/secboot/tree/v0.0.0-20260629000000-abcdef123456"
+    assert source.ref == "abcdef123456"
+    assert source.url == "https://github.com/snapcore/secboot/commit/abcdef123456"
 
 
 def test_resolve_secboot_dereferences_annotated_snapd_tag_to_commit():
@@ -240,7 +240,7 @@ def test_resolve_secboot_dereferences_annotated_snapd_tag_to_commit():
 
     assert warnings == ()
     assert source is not None
-    assert source.ref == "v0.0.0-20260629000000-abcdef123456"
+    assert source.ref == "abcdef123456"
 
 
 def test_resolver_returns_unknown_warning_when_tag_lookup_fails():
