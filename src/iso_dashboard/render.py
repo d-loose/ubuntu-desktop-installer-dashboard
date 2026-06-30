@@ -21,7 +21,13 @@ def _package(value: dict[str, object] | None) -> str:
         return "unknown"
     version = escape(str(value["version"]))
     revision = value.get("revision")
-    return f"{version} (rev {escape(str(revision))})" if revision else version
+    channel = value.get("channel")
+    details = []
+    if channel:
+        details.append(f"channel {escape(str(channel))}")
+    if revision:
+        details.append(f"rev {escape(str(revision))}")
+    return f"{version} ({', '.join(details)})" if details else version
 
 
 def _source(value: dict[str, object] | None) -> str:

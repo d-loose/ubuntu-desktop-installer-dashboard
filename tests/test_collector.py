@@ -30,13 +30,13 @@ class FakeSnapcraftResolver:
             "ubuntu-desktop-bootstrap": "26.04-3b3d4a4cc",
             "snapd": "2.70.1",
         }
-        return PackageVersion(snap.name, versions[snap.name], snap.revision), ()
+        return PackageVersion(snap.name, versions[snap.name], snap.revision, snap.channel), ()
 
 
 def test_collect_record_builds_complete_pending_record():
     responses = {
         PENDING_URL: '<a href="noble-desktop-amd64.iso">noble-desktop-amd64.iso</a> 2026-06-29 10:15\n<a href="noble-desktop-amd64.manifest">noble-desktop-amd64.manifest</a> 2026-06-29 10:16',
-        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 1.2.3 42\nsnap:snapd 2.70 24718\nsnapd 2.70+ubuntu1\n",
+        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 26.04/stable/ubuntu-26.04.1 42\nsnap:snapd stable 24718\nsnapd 2.70+ubuntu1\n",
     }
     resolver = FakeResolver()
     collector = Collector(lambda url: responses[url], resolver, FakeSnapcraftResolver())
@@ -49,10 +49,12 @@ def test_collect_record_builds_complete_pending_record():
     assert record.manifest_url == MANIFEST_URL
     assert record.published_at == "2026-06-29T10:15:00Z"
     assert record.ubuntu_desktop_bootstrap.version == "26.04-3b3d4a4cc"
+    assert record.ubuntu_desktop_bootstrap.channel == "26.04/stable/ubuntu-26.04.1"
     assert record.snapd_snap.version == "2.70.1"
+    assert record.snapd_snap.channel == "stable"
     assert record.snapd_deb.version == "2.70+ubuntu1"
-    assert resolver.bootstrap == PackageVersion("ubuntu-desktop-bootstrap", "26.04-3b3d4a4cc", "42")
-    assert resolver.snapd == PackageVersion("snapd", "2.70.1", "24718")
+    assert resolver.bootstrap == PackageVersion("ubuntu-desktop-bootstrap", "26.04-3b3d4a4cc", "42", "26.04/stable/ubuntu-26.04.1")
+    assert resolver.snapd == PackageVersion("snapd", "2.70.1", "24718", "stable")
     assert record.subiquity.ref == "subiquity-sha"
     assert record.secboot.ref == "v1"
     assert record.warnings == ()
@@ -61,7 +63,7 @@ def test_collect_record_builds_complete_pending_record():
 def test_collect_record_logs_key_steps(caplog):
     responses = {
         PENDING_URL: '<a href="noble-desktop-amd64.iso">noble-desktop-amd64.iso</a> 2026-06-29 10:15\n<a href="noble-desktop-amd64.manifest">noble-desktop-amd64.manifest</a> 2026-06-29 10:16',
-        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 1.2.3 42\nsnap:snapd 2.70 24718\nsnapd 2.70+ubuntu1\n",
+        MANIFEST_URL: "snap:ubuntu-desktop-bootstrap 26.04/stable/ubuntu-26.04.1 42\nsnap:snapd stable 24718\nsnapd 2.70+ubuntu1\n",
     }
     collector = Collector(lambda url: responses[url], FakeResolver(), FakeSnapcraftResolver())
 

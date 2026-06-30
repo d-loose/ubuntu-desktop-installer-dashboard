@@ -26,12 +26,12 @@ def test_resolve_revision_uses_snapcraft_refresh_api_request():
     resolver = SnapcraftResolver(post_json)
 
     resolved, warnings = resolver.resolve_revision(
-        PackageVersion("ubuntu-desktop-bootstrap", None, "628"),
+        PackageVersion("ubuntu-desktop-bootstrap", None, "628", "26.04/stable/ubuntu-26.04.1"),
         "amd64",
     )
 
     assert warnings == ()
-    assert resolved == PackageVersion("ubuntu-desktop-bootstrap", "26.04-3b3d4a4cc", "628")
+    assert resolved == PackageVersion("ubuntu-desktop-bootstrap", "26.04-3b3d4a4cc", "628", "26.04/stable/ubuntu-26.04.1")
     assert requests == [
         (
             "https://api.snapcraft.io/v2/snaps/refresh",
@@ -74,7 +74,7 @@ def test_resolve_revision_logs_lookup(caplog):
     resolver = SnapcraftResolver(post_json)
 
     with caplog.at_level("INFO", logger="iso_dashboard.snapcraft"):
-        resolver.resolve_revision(PackageVersion("snapd", None, "24718"), "amd64")
+        resolver.resolve_revision(PackageVersion("snapd", None, "24718", "stable"), "amd64")
 
     assert "Resolving snapd revision 24718 for amd64 via Snapcraft" in caplog.messages
     assert "Resolved snapd revision 24718 to version 2.75.2" in caplog.messages
@@ -85,7 +85,7 @@ def test_resolve_revision_returns_original_with_warning_when_lookup_fails():
         raise RuntimeError("snapcraft unavailable")
 
     resolver = SnapcraftResolver(failing_post)
-    original = PackageVersion("snapd", None, "24718")
+    original = PackageVersion("snapd", None, "24718", "stable")
 
     resolved, warnings = resolver.resolve_revision(original, "arm64")
 

@@ -85,9 +85,9 @@ def parse_manifest(text: str) -> ManifestVersions:
             continue
         name = parts[0]
         if name == "snap:ubuntu-desktop-bootstrap" and len(parts) >= 3:
-            ubuntu_desktop_bootstrap = PackageVersion("ubuntu-desktop-bootstrap", parts[1], parts[2])
+            ubuntu_desktop_bootstrap = PackageVersion("ubuntu-desktop-bootstrap", None, parts[2], parts[1])
         elif name == "snap:snapd" and len(parts) >= 3:
-            snapd_snap = PackageVersion("snapd", parts[1], parts[2])
+            snapd_snap = PackageVersion("snapd", None, parts[2], parts[1])
         elif name == "snapd" and len(parts) >= 2:
             snapd_deb = PackageVersion("snapd", parts[1], None)
 

@@ -15,9 +15,9 @@ def sample_payload():
                 "iso_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.iso",
                 "manifest_url": "https://cdimage.ubuntu.com/noble/daily-live/pending/noble-desktop-amd64.manifest",
                 "published_at": "2026-06-29T10:15:00Z",
-                "ubuntu_desktop_bootstrap": {"name": "ubuntu-desktop-bootstrap", "version": "1.2.3", "revision": "42"},
-                "snapd_snap": {"name": "snapd", "version": "2.70", "revision": "24718"},
-                "snapd_deb": {"name": "snapd", "version": "2.70+ubuntu1", "revision": None},
+                "ubuntu_desktop_bootstrap": {"name": "ubuntu-desktop-bootstrap", "version": "1.2.3", "revision": "42", "channel": "26.04/stable/ubuntu-26.04.1"},
+                "snapd_snap": {"name": "snapd", "version": "2.70", "revision": "24718", "channel": "stable"},
+                "snapd_deb": {"name": "snapd", "version": "2.70+ubuntu1", "revision": None, "channel": None},
                 "subiquity": {
                     "name": "subiquity",
                     "ref": "64b0c70ec29dcc597a1f554486c61fcd634ce86d",
@@ -94,8 +94,8 @@ def test_render_dashboard_includes_summary_table_and_links():
     assert "28 Jun 2026, 22:05 UTC" in html
     assert "noble" in html
     assert "amd64" in html
-    assert "1.2.3 (rev 42)" in html
-    assert "2.70 (rev 24718)" in html
+    assert "1.2.3 (channel 26.04/stable/ubuntu-26.04.1, rev 42)" in html
+    assert "2.70 (channel stable, rev 24718)" in html
     assert "2.70+ubuntu1" in html
     assert ">64b0c70<" in html
     assert 'title="64b0c70ec29dcc597a1f554486c61fcd634ce86d"' in html

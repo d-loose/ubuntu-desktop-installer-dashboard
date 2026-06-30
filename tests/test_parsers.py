@@ -48,11 +48,14 @@ def test_parse_manifest_extracts_snap_and_deb_versions():
     versions = parse_manifest((FIXTURES / "example.manifest").read_text())
 
     assert versions.ubuntu_desktop_bootstrap is not None
-    assert versions.ubuntu_desktop_bootstrap.version == "1.2.3"
+    assert versions.ubuntu_desktop_bootstrap.version is None
+    assert versions.ubuntu_desktop_bootstrap.channel == "26.04/stable/ubuntu-26.04.1"
     assert versions.ubuntu_desktop_bootstrap.revision == "42"
     assert versions.snapd_snap is not None
-    assert versions.snapd_snap.version == "2.70"
+    assert versions.snapd_snap.version is None
+    assert versions.snapd_snap.channel == "stable"
     assert versions.snapd_snap.revision == "24718"
     assert versions.snapd_deb is not None
     assert versions.snapd_deb.version == "2.70+ubuntu1"
+    assert versions.snapd_deb.channel is None
     assert versions.snapd_deb.revision is None

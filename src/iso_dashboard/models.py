@@ -9,6 +9,7 @@ class PackageVersion:
     name: str
     version: str | None
     revision: str | None
+    channel: str | None = None
 
 
 @dataclass(frozen=True)

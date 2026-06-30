@@ -68,6 +68,6 @@ class SnapcraftResolver:
                 version = resolved.get("version")
                 if isinstance(version, str) and version:
                     LOGGER.info("Resolved %s revision %s to version %s", snap.name, snap.revision, version)
-                    return PackageVersion(snap.name, version, snap.revision), ()
+                    return PackageVersion(snap.name, version, snap.revision, snap.channel), ()
 
         return snap, (f"Cannot resolve {snap.name} snap revision {snap.revision} via Snapcraft: response did not include snap",)
