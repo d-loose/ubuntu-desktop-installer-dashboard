@@ -65,7 +65,7 @@ def test_render_dashboard_includes_summary_table_and_links():
     html = render_dashboard(sample_payload())
 
     assert "Ubuntu Desktop ISO Dashboard" in html
-    assert "https://assets.ubuntu.com/v1/vanilla-framework-version-" in html
+    assert "https://assets.ubuntu.com/v1/vanilla_framework_version_4.55.0.min.css" in html
     assert "p-navigation" not in html
     assert "p-strip" in html
     assert "data-architecture-filter" in html

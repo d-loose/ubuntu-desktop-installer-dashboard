@@ -8,7 +8,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
 
-VANILLA_CSS = "https://assets.ubuntu.com/v1/vanilla-framework-version-1.8.0.min.css"
+VANILLA_CSS = "https://assets.ubuntu.com/v1/vanilla_framework_version_4.55.0.min.css"
 
 # Accept commit refs between 7 and 40 hex chars. Short 7-char refs are valid
 # abbreviated commit identifiers used throughout the renderer and tests.
